@@ -1,0 +1,23 @@
+package com.hcl.stockanalysis.repository;
+
+import com.hcl.stockanalysis.entity.StockPrice;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.time.LocalDate;
+import java.util.List;
+
+public interface StockPriceRepository extends JpaRepository<StockPrice, Long> {
+
+    List<StockPrice> findByStockSymbolOrderByPriceDateDesc(String symbol);
+
+    @Query("SELECT sp FROM StockPrice sp WHERE sp.stock.symbol = :symbol ORDER BY sp.priceDate DESC")
+    List<StockPrice> findLatestPricesBySymbol(@Param("symbol") String symbol);
+
+    @Query("SELECT sp FROM StockPrice sp WHERE sp.stock.symbol = :symbol AND sp.priceDate BETWEEN :startDate AND :endDate ORDER BY sp.priceDate ASC")
+    List<StockPrice> findBySymbolAndDateRange(
+            @Param("symbol") String symbol,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+}

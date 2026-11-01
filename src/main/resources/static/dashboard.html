@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - StockAnalysis</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <script>
+    requireAuth();
+  </script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/dashboard.html" class="nav-brand">
+      <div class="brand-icon">📈</div>
+      <span>StockAnalysis</span>
+    </a>
+    <div class="nav-links">
+      <div class="nav-user">User: <span id="userNameDisplay">--</span></div>
+      <a href="/swagger-ui.html" class="btn btn-outline btn-sm" target="_blank">API Docs</a>
+      <button onclick="logout()" class="btn btn-danger btn-sm">Sign Out</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div style="margin-bottom: 1.5rem;">
+      <h1 style="font-size: 1.75rem; font-weight: 700;">Equities Dashboard</h1>
+      <p style="color: var(--text-secondary); font-size: 0.9rem;">Real-time technical indicators, momentum scores & forecasts across 10 top Indian equities</p>
+    </div>
+
+    <!-- Summary Counts -->
+    <div class="summary-bar">
+      <div class="summary-card" style="cursor: pointer;" onclick="setSignalFilter('ALL')">
+        <div>
+          <div class="label">Total Equities</div>
+          <div class="value" id="totalCount">--</div>
+        </div>
+        <div style="font-size: 2rem;">🏢</div>
+      </div>
+
+      <div class="summary-card" style="border-left: 4px solid var(--success); cursor: pointer;" onclick="setSignalFilter('BUY')">
+        <div>
+          <div class="label" style="color: var(--success);">BUY Signals</div>
+          <div class="value" id="buyCount" style="color: var(--success);">--</div>
+        </div>
+        <div style="font-size: 2rem;">🟢</div>
+      </div>
+
+      <div class="summary-card" style="border-left: 4px solid var(--warning); cursor: pointer;" onclick="setSignalFilter('HOLD')">
+        <div>
+          <div class="label" style="color: var(--warning);">HOLD Signals</div>
+          <div class="value" id="holdCount" style="color: var(--warning);">--</div>
+        </div>
+        <div style="font-size: 2rem;">🟡</div>
+      </div>
+
+      <div class="summary-card" style="border-left: 4px solid var(--danger); cursor: pointer;" onclick="setSignalFilter('SELL')">
+        <div>
+          <div class="label" style="color: var(--danger);">SELL Signals</div>
+          <div class="value" id="sellCount" style="color: var(--danger);">--</div>
+        </div>
+        <div style="font-size: 2rem;">🔴</div>
+      </div>
+    </div>
+
+    <!-- Toolbar: Search and Signal Filters -->
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="form-control" placeholder="Search symbol or name...">
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Filter Signal:</span>
+        <button class="btn btn-outline btn-sm filter-btn active" data-filter="ALL" onclick="setSignalFilter('ALL')">All</button>
+        <button class="btn btn-outline btn-sm filter-btn" data-filter="BUY" onclick="setSignalFilter('BUY')">BUY</button>
+        <button class="btn btn-outline btn-sm filter-btn" data-filter="HOLD" onclick="setSignalFilter('HOLD')">HOLD</button>
+        <button class="btn btn-outline btn-sm filter-btn" data-filter="SELL" onclick="setSignalFilter('SELL')">SELL</button>
+      </div>
+
+      <div style="color: var(--text-secondary); font-size: 0.85rem;" id="filterStatus">
+        Showing all stocks
+      </div>
+    </div>
+
+    <!-- Loading / Stock Cards Grid -->
+    <div id="loadingIndicator" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+      Loading market data and calculations...
+    </div>
+
+    <div class="stock-grid" id="stockGrid" style="display: none;"></div>
+  </main>
+
+  <footer>
+    <p>Educational purposes only, not financial advice</p>
+  </footer>
+
+  <script>
+    document.getElementById('userNameDisplay').textContent = getUsername();
+
+    let allStocksData = [];
+    let currentSignalFilter = 'ALL';
+
+    async function loadDashboard() {
+      try {
+        const stocksRes = await fetchWithAuth('/api/stocks');
+        const stocks = await stocksRes.json();
+
+        // Fetch analysis for each stock in parallel
+        const analysisPromises = stocks.map(s => 
+          fetchWithAuth(`/api/stocks/${s.symbol}/analysis`)
+            .then(r => r.json())
+            .catch(() => null)
+        );
+
+        const analyses = await Promise.all(analysisPromises);
+
+        allStocksData = stocks.map((s, idx) => {
+          const a = analyses[idx] || {};
+          return {
+            symbol: s.symbol,
+            companyName: s.companyName,
+            sector: s.sector,
+            latestClosePrice: a.latestClosePrice || 0,
+            percentageChange: a.percentageChange || 0,
+            signal: a.signal || 'HOLD',
+            signalReason: a.signalReason || 'Neutral'
+          };
+        });
+
+        updateSummaryCounts(allStocksData);
+        applyFilters();
+
+        document.getElementById('loadingIndicator').style.display = 'none';
+        document.getElementById('stockGrid').style.display = 'grid';
+
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+        document.getElementById('loadingIndicator').textContent = 'Failed to load stock data. Please check authentication or try again.';
+      }
+    }
+
+    function updateSummaryCounts(data) {
+      document.getElementById('totalCount').textContent = data.length;
+      const buys = data.filter(s => s.signal === 'BUY').length;
+      const holds = data.filter(s => s.signal === 'HOLD').length;
+      const sells = data.filter(s => s.signal === 'SELL').length;
+
+      document.getElementById('buyCount').textContent = buys;
+      document.getElementById('holdCount').textContent = holds;
+      document.getElementById('sellCount').textContent = sells;
+    }
+
+    function setSignalFilter(signal) {
+      currentSignalFilter = signal;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-filter') === signal);
+      });
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const filtered = allStocksData.filter(s => {
+        const matchesQuery = s.symbol.toLowerCase().includes(q) || 
+                             s.companyName.toLowerCase().includes(q) ||
+                             (s.sector && s.sector.toLowerCase().includes(q));
+        const matchesSignal = (currentSignalFilter === 'ALL') || (s.signal === currentSignalFilter);
+        return matchesQuery && matchesSignal;
+      });
+
+      renderStockCards(filtered);
+      document.getElementById('filterStatus').textContent = `Showing ${filtered.length} of ${allStocksData.length} stocks`;
+    }
+
+    function renderStockCards(stocks) {
+      const grid = document.getElementById('stockGrid');
+      grid.innerHTML = '';
+
+      if (stocks.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">No stocks matching filter criteria.</div>';
+        return;
+      }
+
+      stocks.forEach(s => {
+        const isUp = s.percentageChange >= 0;
+        const changeClass = isUp ? 'change-up' : 'change-down';
+        const changeIcon = isUp ? '▲' : '▼';
+
+        const card = document.createElement('div');
+        card.className = 'stock-card';
+        card.innerHTML = `
+          <div>
+            <div class="stock-header">
+              <div>
+                <div class="stock-symbol">${s.symbol}</div>
+                <div class="stock-name" title="${s.companyName}">${s.companyName}</div>
+              </div>
+              ${getSignalBadge(s.signal)}
+            </div>
+
+            <div class="stock-price-row">
+              <span class="stock-price">${formatCurrency(s.latestClosePrice)}</span>
+              <span class="stock-change ${changeClass}">${changeIcon} ${formatPercent(s.percentageChange)}</span>
+            </div>
+
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+              ${s.sector}
+            </div>
+          </div>
+
+          <a href="/stock.html?symbol=${s.symbol}" class="btn btn-outline btn-sm btn-block">
+            View Analytics & Forecast &rarr;
+          </a>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+    loadDashboard();
+  </script>
+</body>
+</html>

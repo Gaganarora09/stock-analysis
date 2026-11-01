@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Analytics & Forecast - StockAnalysis</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <!-- Chart.js 4.4.1 CDN as specified -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    requireAuth();
+  </script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/dashboard.html" class="nav-brand">
+      <div class="brand-icon">📈</div>
+      <span>StockAnalysis</span>
+    </a>
+    <div class="nav-links">
+      <a href="/dashboard.html" class="btn btn-outline btn-sm">&larr; Back to Dashboard</a>
+      <div class="nav-user">User: <span id="userNameDisplay">--</span></div>
+      <button onclick="logout()" class="btn btn-danger btn-sm">Sign Out</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- Top Header -->
+    <div class="detail-header">
+      <div class="detail-title">
+        <h1>
+          <span id="symbolDisplay">---</span>
+          <span id="signalBadgeContainer"></span>
+        </h1>
+        <p id="companyNameDisplay">Loading company metadata...</p>
+      </div>
+
+      <div style="text-align: right;">
+        <div style="font-size: 2rem; font-weight: 800;" id="latestPriceDisplay">₹--</div>
+        <div style="font-size: 1rem; font-weight: 600;" id="changeDisplay">--%</div>
+      </div>
+    </div>
+
+    <!-- Main Two-Column Layout (Side Panel + Charts) -->
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start;" id="mainGrid">
+      
+      <!-- Side Panel: Signal, Reason, High, Low, Volatility, % Change -->
+      <aside style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Technical Strategy Card -->
+        <div class="stat-box" style="border-left: 4px solid var(--accent); padding: 1.25rem;">
+          <div class="stat-label">System Recommendation</div>
+          <div style="margin: 0.5rem 0;" id="panelBadge">--</div>
+          <div style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;" id="panelReason">
+            Calculating signal...
+          </div>
+        </div>
+
+        <!-- Metrics List -->
+        <div class="stat-box">
+          <div class="stat-label">Technical Oscillator</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <span>RSI (14)</span>
+            <strong id="panelRsi" style="font-size: 1.15rem;">--</strong>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-label">Moving Averages</div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+            <span style="color: #f59e0b;">5-Day SMA</span>
+            <strong id="panelSma5">--</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.35rem;">
+            <span style="color: #a855f7;">20-Day SMA</span>
+            <strong id="panelSma20">--</strong>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-label">Historical Extremes (60-Day)</div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+            <span style="color: var(--success);">Highest</span>
+            <strong id="panelHigh" style="color: var(--success);">--</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.35rem;">
+            <span style="color: var(--danger);">Lowest</span>
+            <strong id="panelLow" style="color: var(--danger);">--</strong>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-label">Price Volatility & Momentum</div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+            <span>Volatility</span>
+            <strong id="panelVol">--</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.35rem;">
+            <span>Daily Change</span>
+            <strong id="panelChange">--</strong>
+          </div>
+        </div>
+
+        <!-- 7-Day Forecast Summary Box -->
+        <div class="stat-box" style="border: 1px dashed var(--accent);">
+          <div class="stat-label">7-Day Linear Forecast</div>
+          <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.4rem;" id="panelForecastTrend">--</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;" id="panelForecastDetails">--</div>
+        </div>
+      </aside>
+
+      <!-- Charts Column -->
+      <section style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Price Chart Card -->
+        <div class="chart-card" style="margin-bottom: 0;">
+          <div class="chart-header">
+            <div class="chart-title">Price History (60 Days) with SMA5, SMA20 & 7-Day Linear Forecast</div>
+            <div class="chart-controls">
+              <label for="compareSelect" style="font-size: 0.85rem; color: var(--text-secondary);">Compare with:</label>
+              <select id="compareSelect" class="select-control">
+                <option value="">None</option>
+              </select>
+            </div>
+          </div>
+          <div style="height: 380px; position: relative;">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- RSI(14) Chart Card -->
+        <div class="chart-card" style="margin-bottom: 0;">
+          <div class="chart-header">
+            <div class="chart-title">RSI (14) Relative Strength Oscillator</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">
+              Overbought: 70 &bull; Oversold: 30
+            </div>
+          </div>
+          <div style="height: 180px; position: relative;">
+            <canvas id="rsiChart"></canvas>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>Educational purposes only, not financial advice</p>
+  </footer>
+
+  <script>
+    document.getElementById('userNameDisplay').textContent = getUsername();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const symbol = (urlParams.get('symbol') || 'HCLTECH').toUpperCase();
+
+    let priceChart = null;
+    let rsiChart = null;
+    let mainAnalysis = null;
+    let mainPrediction = null;
+    let allStocks = [];
+
+    async function initPage() {
+      document.getElementById('symbolDisplay').textContent = symbol;
+
+      try {
+        const [stocksRes, analysisRes, predRes] = await Promise.all([
+          fetchWithAuth('/api/stocks'),
+          fetchWithAuth(`/api/stocks/${symbol}/analysis`),
+          fetchWithAuth(`/api/stocks/${symbol}/prediction`)
+        ]);
+
+        allStocks = await stocksRes.json();
+        mainAnalysis = await analysisRes.json();
+        mainPrediction = await predRes.json();
+
+        populateCompareDropdown();
+        renderSidePanel(mainAnalysis, mainPrediction);
+        renderPriceChart(mainAnalysis, mainPrediction);
+        renderRSIChart(mainAnalysis);
+
+      } catch (err) {
+        console.error('Failed to load stock data:', err);
+        alert('Could not load analysis for: ' + symbol);
+      }
+    }
+
+    function renderSidePanel(a, p) {
+      document.getElementById('companyNameDisplay').textContent = a.companyName;
+      document.getElementById('latestPriceDisplay').textContent = formatCurrency(a.latestClosePrice);
+
+      const isUp = a.percentageChange >= 0;
+      const chgEl = document.getElementById('changeDisplay');
+      chgEl.className = isUp ? 'change-up' : 'change-down';
+      chgEl.textContent = (isUp ? '▲ ' : '▼ ') + formatPercent(a.percentageChange);
+
+      document.getElementById('signalBadgeContainer').innerHTML = getSignalBadge(a.signal);
+      document.getElementById('panelBadge').innerHTML = getSignalBadge(a.signal);
+      document.getElementById('panelReason').textContent = a.signalReason;
+
+      document.getElementById('panelRsi').textContent = (a.rsi14 || 50).toFixed(2);
+      document.getElementById('panelSma5').textContent = formatCurrency(a.movingAverage5Day);
+      document.getElementById('panelSma20').textContent = formatCurrency(a.movingAverage20Day);
+      document.getElementById('panelHigh').textContent = formatCurrency(a.highestPrice);
+      document.getElementById('panelLow').textContent = formatCurrency(a.lowestPrice);
+      document.getElementById('panelVol').textContent = (a.volatility || 0) + '%';
+      document.getElementById('panelChange').textContent = formatPercent(a.percentageChange);
+      document.getElementById('panelChange').className = isUp ? 'change-up' : 'change-down';
+
+      const forecastEl = document.getElementById('panelForecastTrend');
+      forecastEl.textContent = `Trend: ${p.trend}`;
+      forecastEl.style.color = p.trend === 'UP' ? 'var(--success)' : 'var(--danger)';
+      document.getElementById('panelForecastDetails').textContent = 
+        `Target 7-Day: ${formatCurrency(p.predictedFinalPrice)} (${formatPercent(p.predictedChangePercent)})`;
+    }
+
+    function populateCompareDropdown() {
+      const select = document.getElementById('compareSelect');
+      allStocks.forEach(s => {
+        if (s.symbol !== symbol) {
+          const opt = document.createElement('option');
+          opt.value = s.symbol;
+          opt.textContent = `${s.symbol} - ${s.companyName}`;
+          select.appendChild(opt);
+        }
+      });
+      select.addEventListener('change', handleCompareChange);
+    }
+
+    async function handleCompareChange(e) {
+      const compSym = e.target.value;
+      if (!compSym) {
+        if (priceChart && priceChart.data.datasets.length > 4) {
+          priceChart.data.datasets.splice(4);
+          delete priceChart.options.scales.y1;
+          priceChart.update();
+        }
+        return;
+      }
+
+      try {
+        const res = await fetchWithAuth(`/api/stocks/${compSym}/analysis`);
+        const compAnalysis = await res.json();
+
+        const compPricesAligned = mainAnalysis.dates.map(d => {
+          const idx = compAnalysis.dates.indexOf(d);
+          return idx !== -1 ? compAnalysis.closePrices[idx] : null;
+        });
+
+        const compDataset = {
+          label: `${compSym} Close (Secondary Axis)`,
+          data: compPricesAligned,
+          borderColor: '#ec4899',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.15,
+          yAxisID: 'y1'
+        };
+
+        if (priceChart.data.datasets.length > 4) {
+          priceChart.data.datasets[4] = compDataset;
+        } else {
+          priceChart.data.datasets.push(compDataset);
+        }
+
+        priceChart.options.scales.y1 = {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#ec4899' }
+        };
+
+        priceChart.update();
+      } catch (err) {
+        console.error('Failed to load comparison stock:', err);
+      }
+    }
+
+    function renderPriceChart(a, p) {
+      const ctx = document.getElementById('priceChart').getContext('2d');
+
+      const labels = [...a.dates];
+      const histCloses = [...a.closePrices];
+      const sma5 = [...a.sma5Series];
+      const sma20 = [...a.sma20Series];
+
+      // Prediction: connect to last close
+      const predCloses = new Array(a.dates.length).fill(null);
+      predCloses[a.dates.length - 1] = a.latestClosePrice;
+
+      p.predictions.forEach(pt => {
+        labels.push(pt.date);
+        histCloses.push(null);
+        sma5.push(null);
+        sma20.push(null);
+        predCloses.push(pt.predictedPrice);
+      });
+
+      if (priceChart) priceChart.destroy();
+
+      priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: `${a.symbol} Close`,
+              data: histCloses,
+              borderColor: '#388bfd',
+              backgroundColor: 'rgba(56, 139, 253, 0.08)',
+              borderWidth: 2,
+              fill: true,
+              pointRadius: 0,
+              tension: 0.15
+            },
+            {
+              label: 'SMA (5)',
+              data: sma5,
+              borderColor: '#f59e0b',
+              borderWidth: 1.6,
+              pointRadius: 0,
+              tension: 0.2
+            },
+            {
+              label: 'SMA (20)',
+              data: sma20,
+              borderColor: '#a855f7',
+              borderWidth: 1.6,
+              pointRadius: 0,
+              tension: 0.2
+            },
+            {
+              label: '7-Day Prediction (Linear)',
+              data: predCloses,
+              borderColor: '#10b981',
+              borderWidth: 2.2,
+              borderDash: [6, 4],
+              pointRadius: 3,
+              pointBackgroundColor: '#10b981',
+              tension: 0.05
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#94a3b8' } },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  let l = ctx.dataset.label || '';
+                  if (l) l += ': ';
+                  if (ctx.parsed.y !== null) l += '₹' + ctx.parsed.y.toFixed(2);
+                  return l;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#1f2937' },
+              ticks: { color: '#64748b', maxTicksLimit: 12 }
+            },
+            y: {
+              grid: { color: '#1f2937' },
+              ticks: {
+                color: '#94a3b8',
+                callback: function(v) { return '₹' + v; }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderRSIChart(a) {
+      const ctx = document.getElementById('rsiChart').getContext('2d');
+      const n = a.closePrices.length;
+
+      // Calculate RSI series for each date
+      const rsiSeries = calculateRSI(a.closePrices, 14);
+
+      if (rsiChart) rsiChart.destroy();
+
+      rsiChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: a.dates,
+          datasets: [
+            {
+              label: 'RSI (14)',
+              data: rsiSeries,
+              borderColor: '#388bfd',
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.15
+            },
+            {
+              label: 'Overbought (70)',
+              data: new Array(n).fill(70),
+              borderColor: 'rgba(239, 68, 68, 0.7)',
+              borderWidth: 1.2,
+              borderDash: [4, 4],
+              pointRadius: 0
+            },
+            {
+              label: 'Oversold (30)',
+              data: new Array(n).fill(30),
+              borderColor: 'rgba(16, 185, 129, 0.7)',
+              borderWidth: 1.2,
+              borderDash: [4, 4],
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#94a3b8' } }
+          },
+          scales: {
+            x: {
+              grid: { color: '#1f2937' },
+              ticks: { color: '#64748b', maxTicksLimit: 12 }
+            },
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: '#1f2937' },
+              ticks: { color: '#94a3b8', stepSize: 20 }
+            }
+          }
+        }
+      });
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

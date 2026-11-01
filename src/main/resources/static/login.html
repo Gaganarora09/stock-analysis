@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - StockAnalysis</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <script>
+    if (isLoggedIn()) {
+      window.location.replace('/dashboard.html');
+    }
+  </script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/index.html" class="nav-brand">
+      <div class="brand-icon">📈</div>
+      <span>StockAnalysis</span>
+    </a>
+    <div class="nav-links">
+      <a href="/register.html" class="btn btn-outline btn-sm">Register</a>
+    </div>
+  </nav>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <h2>Welcome Back</h2>
+      <p class="subtitle">Authenticate with HTTP Basic to access market analytics</p>
+
+      <div id="alertBox" class="alert alert-danger"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" class="form-control" placeholder="e.g. alice" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+
+      <div style="margin-top: 1.25rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--text-secondary);">
+        <strong>Demo Accounts:</strong><br>
+        &bull; <code>admin</code> / <code>admin123</code> (Admin)<br>
+        &bull; <code>alice</code> / <code>alice123</code> (Trader)<br>
+        &bull; <code>bob</code> / <code>bob123</code> (Analyst)
+      </div>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="/register.html">Create one here</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Educational purposes only, not financial advice</p>
+  </footer>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const alertBox = document.getElementById('alertBox');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.style.display = 'none';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        alertBox.textContent = 'Please enter both username and password.';
+        alertBox.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Verifying credentials...';
+
+      try {
+        const credentials = btoa(username + ':' + password);
+        const res = await fetch('/api/stocks', {
+          headers: {
+            'Authorization': 'Basic ' + credentials
+          }
+        });
+
+        if (res.ok) {
+          saveCredentials(username, password);
+          window.location.replace('/dashboard.html');
+        } else if (res.status === 401) {
+          alertBox.textContent = 'Invalid username or password. Please try again.';
+          alertBox.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
+        } else {
+          alertBox.textContent = 'Server returned error (' + res.status + '). Please try again.';
+          alertBox.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
+        }
+      } catch (err) {
+        alertBox.textContent = 'Could not connect to the server. Please check your network and try again.';
+        alertBox.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>
