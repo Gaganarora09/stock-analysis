@@ -685,5 +685,5 @@ SELECT * FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM stock_price sp WHERE sp.stock_id = v.stock_id AND sp.price_date = v.price_date);
 
 
--- Reset sequence for newly created stocks
-ALTER TABLE stock ALTER COLUMN id RESTART WITH 100;
+
+

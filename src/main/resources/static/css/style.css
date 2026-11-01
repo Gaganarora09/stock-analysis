@@ -1,43 +1,43 @@
 /* ==========================================================================
-   StockAnalysis — Simple, Calm, Easy-to-Read Light Theme
+   StockAnalysis — Warm, Calm Light Theme
    All colors strictly defined as CSS variables on :root and used everywhere.
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Core Required Theme Palette */
-  --bg: #F5F7FA;
-  --surface: #FFFFFF;
-  --border: #E2E8F0;
-  --border-hover: #CBD5E1;
-  --text: #1E293B;
-  --text-muted: #64748B;
-  --accent: #2563EB;
-  --accent-hover: #1D4ED8;
-  --accent-bg: #EFF6FF;
-  --accent-border: #BFDBFE;
+  /* Warm Theme Palette */
+  --bg: #FAF6EE;
+  --surface: #FFFDF8;
+  --surface-alt: #F5EFE2;
+  --border: #E8DFCC;
+  --border-hover: #D6CABE;
+  --text: #2B2A26;
+  --text-muted: #75705F;
+  --accent: #1E5A8A;
+  --accent-hover: #174868;
+  --accent-bg: #EBF3FA;
+  --accent-border: #C8DCED;
 
-  /* Three Required Signal Colors (Soft Tinted Backgrounds & Crisp Contrast Text) */
-  --buy: #16A34A;
-  --buy-bg: #DCFCE7;
-  --buy-border: #BBF7D0;
+  /* Three Required Signal Colors (Soft Warm-Tinted Backgrounds & Crisp Contrast Text) */
+  --buy: #15803D;
+  --buy-bg: #E3F2E6;
+  --buy-border: #C2E5C9;
   --buy-text: #15803D;
 
-  --sell: #DC2626;
-  --sell-bg: #FEE2E2;
-  --sell-border: #FECACA;
+  --sell: #B91C1C;
+  --sell-bg: #FBE4E1;
+  --sell-border: #F6C4BE;
   --sell-text: #B91C1C;
 
-  --hold: #D97706;
-  --hold-bg: #FEF3C7;
-  --hold-border: #FDE68A;
+  --hold: #B45309;
+  --hold-bg: #FDEBC8;
+  --hold-border: #F8D58A;
   --hold-text: #B45309;
 
-  /* Table, Focus & Subtle Shadow */
-  --table-hover: #F8FAFC;
-  --focus-ring: rgba(37, 99, 235, 0.2);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  /* Focus Ring & Warm Shadow */
+  --focus-ring: rgba(30, 90, 138, 0.2);
+  --shadow: 0 1px 2px rgba(80, 60, 20, 0.08);
 
   /* Typography & 8px Border Radius */
   --radius: 8px;
@@ -54,6 +54,7 @@
   --border-color: var(--border);
   --text-primary: var(--text);
   --text-secondary: var(--text-muted);
+  --table-hover: var(--surface-alt);
   --success: var(--buy);
   --success-bg: var(--buy-bg);
   --danger: var(--sell);
@@ -80,7 +81,7 @@ body {
 }
 
 /* ==========================================================================
-   Navigation Bar: White background, 1px bottom border, logo in accent color
+   Navigation Bar: Warm light surface, 1px bottom border, logo in accent color
    ========================================================================== */
 .navbar {
   background-color: var(--surface);
@@ -184,7 +185,7 @@ body {
 }
 
 .btn-outline:hover {
-  background-color: var(--bg);
+  background-color: var(--surface-alt);
   border-color: var(--border-hover);
   color: var(--text);
 }
@@ -198,7 +199,7 @@ body {
 .filter-btn:hover {
   color: var(--text);
   border-color: var(--border-hover);
-  background-color: var(--bg);
+  background-color: var(--surface-alt);
 }
 
 .filter-btn.active {
@@ -215,7 +216,7 @@ body {
 
 .btn-danger:hover {
   background-color: var(--sell-bg);
-  border-color: var(--sell);
+  border-color: var(--sell-border);
   color: var(--sell-text);
 }
 
@@ -260,7 +261,7 @@ body {
 }
 
 /* ==========================================================================
-   Forms & Inputs: White background, 1px gray border, accent focus ring
+   Forms & Inputs: Warm cream background, 1px border, accent focus ring
    Consistent across Login, Register, Dashboard & Admin pages
    ========================================================================== */
 .auth-wrapper {
@@ -421,7 +422,7 @@ input::placeholder {
 }
 
 .badge-sample {
-  background-color: var(--bg);
+  background-color: var(--surface-alt);
   color: var(--text-muted);
   border: 1px solid var(--border);
 }
@@ -499,7 +500,7 @@ input::placeholder {
 }
 
 /* ==========================================================================
-   Stock Cards: White, 1px border. Hover: slightly darker border, no movement
+   Stock Cards: Cream surface, 1px border. Hover: slightly darker border
    ========================================================================== */
 .stock-grid {
   display: grid;
@@ -705,7 +706,7 @@ input::placeholder {
 }
 
 /* ==========================================================================
-   Admin & Data Tables: Light gray header row, thin row dividers
+   Admin & Data Tables: Light warm-gray header row, thin row dividers
    ========================================================================== */
 .table-responsive {
   width: 100%;
@@ -725,7 +726,7 @@ input::placeholder {
 
 .data-table th {
   padding: 0.75rem 1rem;
-  background-color: var(--bg);
+  background-color: var(--surface-alt);
   color: var(--text-muted);
   font-weight: 600;
   border-bottom: 1px solid var(--border);
@@ -742,7 +743,7 @@ input::placeholder {
 }
 
 .data-table tr:hover td {
-  background-color: var(--table-hover);
+  background-color: var(--surface-alt);
 }
 
 .data-table tr:last-child td {
@@ -751,7 +752,7 @@ input::placeholder {
 
 /* Code tags */
 code {
-  background-color: var(--bg);
+  background-color: var(--surface-alt);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 4px;

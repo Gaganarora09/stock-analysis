@@ -191,7 +191,7 @@ The project includes an automated test suite combining unit tests with Mockito a
 mvn clean test
 ```
 
-### Coverage Overview (50 Automated Tests)
+### Coverage Overview (54 Automated Tests)
 
 1. **`AnalysisServiceTest` (6 unit tests)**:
    - Technical indicators: SMA5, SMA20, RSI(14), daily % change, historical high/low, and volatility.
@@ -216,7 +216,12 @@ mvn clean test
    - 60-second in-memory caching: guarantees subsequent requests do not re-query the database while cache is fresh.
    - Cache eviction: verifies explicit cache invalidation when stocks are created, deleted, or refreshed.
    - Empty dataset resilience: returns an empty list gracefully when no stocks exist in the database.
-6. **`AuthAndSecurityIT` (23 integration tests)**:
+6. **`SequenceSyncIT` (4 integration tests)**:
+   - Dynamic sequence synchronization: adding stocks after seed data succeeds without primary key collisions and creates 60 price rows.
+   - Multi-stock sequence progression: adding consecutive stocks in a row assigns monotonically increasing IDs without collisions.
+   - Post-seed user registration: registering users after seeding assigns valid consecutive user IDs.
+   - Idempotency & resilience: running the sequence synchronizer multiple times consecutively changes nothing and subsequent inserts continue to succeed.
+7. **`AuthAndSecurityIT` (23 integration tests)**:
    - Security boundaries: `/api/stocks`, `/api/stocks/summary`, and `/api/watchlist` require authentication (return 401 unauthenticated).
    - HTTP Basic auth: valid credentials (`admin:admin123`) return 200 OK.
    - Aggregated summary: authenticated `GET /api/stocks/summary` returns all stock metrics and signals in a single payload.

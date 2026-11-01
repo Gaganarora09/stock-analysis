@@ -303,7 +303,7 @@
         const compDataset = {
           label: `${compSym} Close (Secondary Axis)`,
           data: compPricesAligned,
-          borderColor: '#7C8CA3',
+          borderColor: '#8A7F6A',
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.15,
@@ -321,7 +321,7 @@
           display: true,
           position: 'right',
           grid: { drawOnChartArea: false },
-          ticks: { color: '#7C8CA3' }
+          ticks: { color: '#8A7F6A' }
         };
 
         priceChart.update();
@@ -360,7 +360,7 @@
             {
               label: `${a.symbol} Close`,
               data: histCloses,
-              borderColor: '#1E293B',
+              borderColor: '#2B2A26',
               borderWidth: 2,
               fill: false,
               pointRadius: 0,
@@ -369,7 +369,7 @@
             {
               label: 'SMA (5)',
               data: sma5,
-              borderColor: '#2563EB',
+              borderColor: '#1E5A8A',
               borderWidth: 1.6,
               pointRadius: 0,
               tension: 0.2
@@ -377,7 +377,7 @@
             {
               label: 'SMA (20)',
               data: sma20,
-              borderColor: '#D97706',
+              borderColor: '#B45309',
               borderWidth: 1.6,
               pointRadius: 0,
               tension: 0.2
@@ -385,11 +385,11 @@
             {
               label: '7-Day Prediction (Linear)',
               data: predCloses,
-              borderColor: '#16A34A',
+              borderColor: '#15803D',
               borderWidth: 2.2,
               borderDash: [6, 4],
               pointRadius: 3,
-              pointBackgroundColor: '#16A34A',
+              pointBackgroundColor: '#15803D',
               tension: 0.05
             }
           ]
@@ -399,7 +399,7 @@
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: { labels: { color: '#64748B' } },
+            legend: { labels: { color: '#75705F' } },
             tooltip: {
               callbacks: {
                 label: function(ctx) {
@@ -413,13 +413,13 @@
           },
           scales: {
             x: {
-              grid: { color: '#E2E8F0' },
-              ticks: { color: '#64748B', maxTicksLimit: 12 }
+              grid: { color: '#E8DFCC' },
+              ticks: { color: '#75705F', maxTicksLimit: 12 }
             },
             y: {
-              grid: { color: '#E2E8F0' },
+              grid: { color: '#E8DFCC' },
               ticks: {
-                color: '#64748B',
+                color: '#75705F',
                 callback: function(v) { return '₹' + v; }
               }
             }
@@ -445,7 +445,7 @@
             {
               label: 'RSI (14)',
               data: rsiSeries,
-              borderColor: '#2563EB',
+              borderColor: '#1E5A8A',
               borderWidth: 2,
               pointRadius: 0,
               tension: 0.15
@@ -453,7 +453,7 @@
             {
               label: 'Overbought (70)',
               data: new Array(n).fill(70),
-              borderColor: 'rgba(220, 38, 38, 0.7)',
+              borderColor: 'rgba(185, 28, 28, 0.8)',
               borderWidth: 1.2,
               borderDash: [4, 4],
               pointRadius: 0
@@ -461,7 +461,7 @@
             {
               label: 'Oversold (30)',
               data: new Array(n).fill(30),
-              borderColor: 'rgba(22, 163, 74, 0.7)',
+              borderColor: 'rgba(21, 128, 61, 0.8)',
               borderWidth: 1.2,
               borderDash: [4, 4],
               pointRadius: 0
@@ -472,18 +472,18 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { labels: { color: '#64748B' } }
+            legend: { labels: { color: '#75705F' } }
           },
           scales: {
             x: {
-              grid: { color: '#E2E8F0' },
-              ticks: { color: '#64748B', maxTicksLimit: 12 }
+              grid: { color: '#E8DFCC' },
+              ticks: { color: '#75705F', maxTicksLimit: 12 }
             },
             y: {
               min: 0,
               max: 100,
-              grid: { color: '#E2E8F0' },
-              ticks: { color: '#64748B', stepSize: 20 }
+              grid: { color: '#E8DFCC' },
+              ticks: { color: '#75705F', stepSize: 20 }
             }
           }
         }
