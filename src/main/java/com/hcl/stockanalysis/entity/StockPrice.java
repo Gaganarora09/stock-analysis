@@ -8,6 +8,8 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "stock_price", uniqueConstraints = {
     @UniqueConstraint(name = "uk_stock_price_date", columnNames = {"stock_id", "price_date"})
+}, indexes = {
+    @Index(name = "idx_stock_price_stock_date", columnList = "stock_id, price_date")
 })
 @Data
 @NoArgsConstructor

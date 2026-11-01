@@ -3,6 +3,7 @@ package com.hcl.stockanalysis.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -10,7 +11,8 @@ import java.math.BigDecimal;
 public class CreateStockRequest {
 
     @NotBlank(message = "Stock symbol is required")
-    @Size(min = 1, max = 20, message = "Symbol must be between 1 and 20 characters")
+    @Size(max = 15, message = "Symbol must be up to 15 characters")
+    @Pattern(regexp = "^[A-Z0-9.-]{1,15}$", message = "Symbol must contain letters, digits, dot and hyphen only, up to 15 characters, converted to uppercase (no spaces or lowercase letters)")
     private String symbol;
 
     @NotBlank(message = "Company name is required")

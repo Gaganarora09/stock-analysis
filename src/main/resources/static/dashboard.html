@@ -87,8 +87,20 @@
     </div>
 
     <!-- Loading / Stock Cards Grid -->
-    <div id="loadingIndicator" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-      Loading market data and calculations...
+    <div id="loadingIndicator" style="text-align: center; padding: 3.5rem 1rem; color: var(--text-secondary);">
+      <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem;"></div>
+      <div style="font-size: 1rem; font-weight: 500; color: var(--text-primary);">Loading market data & analytics...</div>
+      <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">Fetching consolidated summary from server cache</div>
+    </div>
+
+    <!-- Error State with Retry Button -->
+    <div id="errorContainer" class="stat-box" style="display: none; text-align: center; padding: 2.5rem; margin: 2rem auto; max-width: 520px; border: 1px solid var(--danger);">
+      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">⚠️</div>
+      <h3 style="color: var(--danger); font-size: 1.15rem; margin-bottom: 0.5rem;">Failed to load market data</h3>
+      <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;" id="errorMessage">Unable to communicate with the server. Please check your network connection or session.</p>
+      <button onclick="loadDashboard()" class="btn btn-primary btn-sm" style="padding: 0.5rem 1.25rem;">
+        🔄 Retry
+      </button>
     </div>
 
     <div class="stock-grid" id="stockGrid" style="display: none;"></div>
@@ -107,48 +119,53 @@
     let watchlistSymbols = new Set();
 
     async function loadDashboard() {
+      const loadingEl = document.getElementById('loadingIndicator');
+      const gridEl = document.getElementById('stockGrid');
+      const errorEl = document.getElementById('errorContainer');
+
+      if (errorEl) errorEl.style.display = 'none';
+      loadingEl.style.display = 'block';
+      gridEl.style.display = 'none';
+
       try {
-        const [stocksRes, watchlistRes] = await Promise.all([
-          fetchWithAuth('/api/stocks'),
+        const [summaryRes, watchlistRes] = await Promise.all([
+          fetchWithAuth('/api/stocks/summary'),
           fetchWithAuth('/api/watchlist')
         ]);
-        const stocks = await stocksRes.json();
-        const watchlist = await watchlistRes.json();
+
+        if (!summaryRes.ok) {
+          throw new Error(`Server error: ${summaryRes.status} ${summaryRes.statusText}`);
+        }
+
+        const summaryData = await summaryRes.json();
+        const watchlist = await watchlistRes.json().catch(() => []);
         watchlistSymbols = new Set((watchlist || []).map(item => item.symbol));
 
-        // Fetch analysis for each stock in parallel
-        const analysisPromises = stocks.map(s => 
-          fetchWithAuth(`/api/stocks/${s.symbol}/analysis`)
-            .then(r => r.json())
-            .catch(() => null)
-        );
-
-        const analyses = await Promise.all(analysisPromises);
-
-        allStocksData = stocks.map((s, idx) => {
-          const a = analyses[idx] || {};
-          return {
-            symbol: s.symbol,
-            companyName: s.companyName,
-            sector: s.sector,
-            dataSource: a.dataSource || s.dataSource || 'SAMPLE',
-            lastUpdated: a.lastUpdated || s.lastUpdated || null,
-            latestClosePrice: a.latestClosePrice || 0,
-            percentageChange: a.percentageChange || 0,
-            signal: a.signal || 'HOLD',
-            signalReason: a.signalReason || 'Neutral'
-          };
-        });
+        allStocksData = summaryData.map(s => ({
+          symbol: s.symbol,
+          companyName: s.companyName || s.name,
+          sector: s.sector,
+          dataSource: s.dataSource || 'SAMPLE',
+          lastUpdated: s.lastUpdated || null,
+          latestClosePrice: s.latestClosePrice != null ? s.latestClosePrice : (s.latestPrice || 0),
+          percentageChange: s.percentageChange != null ? s.percentageChange : (s.percentChange || 0),
+          signal: s.signal || 'HOLD',
+          signalReason: s.signalReason || 'Neutral'
+        }));
 
         updateSummaryCounts(allStocksData);
         applyFilters();
 
-        document.getElementById('loadingIndicator').style.display = 'none';
-        document.getElementById('stockGrid').style.display = 'grid';
+        loadingEl.style.display = 'none';
+        gridEl.style.display = 'grid';
 
       } catch (err) {
         console.error('Failed to load dashboard:', err);
-        document.getElementById('loadingIndicator').textContent = 'Failed to load stock data. Please check authentication or try again.';
+        loadingEl.style.display = 'none';
+        if (errorEl) {
+          document.getElementById('errorMessage').textContent = err.message || 'Unable to load stock summary from server.';
+          errorEl.style.display = 'block';
+        }
       }
     }
 

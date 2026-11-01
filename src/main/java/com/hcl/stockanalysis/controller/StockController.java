@@ -4,8 +4,10 @@ import com.hcl.stockanalysis.dto.AnalysisDto;
 import com.hcl.stockanalysis.dto.PredictionDto;
 import com.hcl.stockanalysis.dto.StockDto;
 import com.hcl.stockanalysis.dto.StockPriceDto;
+import com.hcl.stockanalysis.dto.StockSummaryDto;
 import com.hcl.stockanalysis.service.AnalysisService;
 import com.hcl.stockanalysis.service.StockService;
+import com.hcl.stockanalysis.service.StockSummaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,16 +27,24 @@ public class StockController {
 
     private final StockService stockService;
     private final AnalysisService analysisService;
+    private final StockSummaryService stockSummaryService;
 
-    public StockController(StockService stockService, AnalysisService analysisService) {
+    public StockController(StockService stockService, AnalysisService analysisService, StockSummaryService stockSummaryService) {
         this.stockService = stockService;
         this.analysisService = analysisService;
+        this.stockSummaryService = stockSummaryService;
     }
 
     @GetMapping
     @Operation(summary = "Get all stocks")
     public ResponseEntity<List<StockDto>> getAllStocks() {
         return ResponseEntity.ok(stockService.getAllStocks());
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "Get high-performance dashboard summary of all stocks in a single cached query")
+    public ResponseEntity<List<StockSummaryDto>> getStockSummary() {
+        return ResponseEntity.ok(stockSummaryService.getStockSummary());
     }
 
     @GetMapping("/{symbol}")

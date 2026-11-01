@@ -67,7 +67,10 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
           <div class="form-group" style="margin-bottom: 0;">
             <label for="stockSymbol">Ticker Symbol</label>
-            <input type="text" id="stockSymbol" class="form-control" placeholder="e.g. BEL" required style="text-transform: uppercase;">
+            <input type="text" id="stockSymbol" class="form-control" placeholder="e.g. BEL" maxlength="15" required>
+            <small style="display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">
+              Letters, digits, dot and hyphen only, up to 15 characters, converted to uppercase
+            </small>
           </div>
 
           <div class="form-group" style="margin-bottom: 0;">
@@ -287,12 +290,42 @@
       const submitBtn = document.getElementById('saveStockBtn');
       alertBox.style.display = 'none';
 
-      const symbol = document.getElementById('stockSymbol').value.trim().toUpperCase();
+      const rawSymbol = document.getElementById('stockSymbol').value;
       const name = document.getElementById('stockName').value.trim();
       const sector = document.getElementById('stockSector').value.trim();
       const startingPrice = parseFloat(document.getElementById('startingPrice').value);
 
-      if (!symbol || !name || !sector || isNaN(startingPrice) || startingPrice <= 0) {
+      if (!rawSymbol || !rawSymbol.trim()) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Stock symbol is required.';
+        alertBox.style.display = 'block';
+        return;
+      }
+
+      if (/\s/.test(rawSymbol)) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Symbol cannot contain spaces. Use letters, digits, dot and hyphen only, up to 15 characters, converted to uppercase.';
+        alertBox.style.display = 'block';
+        return;
+      }
+
+      if (/[a-z]/.test(rawSymbol)) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Symbol cannot contain lowercase letters. Use letters, digits, dot and hyphen only, up to 15 characters, converted to uppercase.';
+        alertBox.style.display = 'block';
+        return;
+      }
+
+      if (!/^[A-Z0-9.-]{1,15}$/.test(rawSymbol)) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Symbol must contain letters, digits, dot and hyphen only, up to 15 characters, converted to uppercase.';
+        alertBox.style.display = 'block';
+        return;
+      }
+
+      const symbol = rawSymbol.trim().toUpperCase();
+
+      if (!name || !sector || isNaN(startingPrice) || startingPrice <= 0) {
         alertBox.className = 'alert alert-danger';
         alertBox.textContent = 'Please fill out all fields with valid values (starting price must be > 0).';
         alertBox.style.display = 'block';
@@ -321,8 +354,9 @@
           alertBox.style.display = 'block';
         } else {
           const errData = await res.json().catch(() => ({}));
+          const errMsg = (errData.fieldErrors && errData.fieldErrors.symbol) || errData.message || `Failed to create stock (${res.status})`;
           alertBox.className = 'alert alert-danger';
-          alertBox.textContent = errData.message || `Failed to create stock (${res.status})`;
+          alertBox.textContent = errMsg;
           alertBox.style.display = 'block';
         }
       } catch (err) {

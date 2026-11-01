@@ -711,3 +711,9 @@ footer {
     grid-template-columns: 1fr !important;
   }
 }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

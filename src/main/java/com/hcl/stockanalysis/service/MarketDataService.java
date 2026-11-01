@@ -36,20 +36,35 @@ public class MarketDataService {
     private final boolean enabled;
     private final String apiKey;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private StockSummaryService stockSummaryService;
+
     private final Map<String, LocalDate> lastRefreshPerStock = new ConcurrentHashMap<>();
     private volatile LocalDate rateLimitDate = null;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public MarketDataService(
             MarketDataClient marketDataClient,
             StockRepository stockRepository,
             StockPriceRepository stockPriceRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) StockSummaryService stockSummaryService,
             @Value("${app.marketdata.enabled:false}") boolean enabled,
             @Value("${app.marketdata.api-key:}") String apiKey) {
         this.marketDataClient = marketDataClient;
         this.stockRepository = stockRepository;
         this.stockPriceRepository = stockPriceRepository;
+        this.stockSummaryService = stockSummaryService;
         this.enabled = enabled;
         this.apiKey = apiKey != null ? apiKey.trim() : "";
+    }
+
+    public MarketDataService(
+            MarketDataClient marketDataClient,
+            StockRepository stockRepository,
+            StockPriceRepository stockPriceRepository,
+            boolean enabled,
+            String apiKey) {
+        this(marketDataClient, stockRepository, stockPriceRepository, null, enabled, apiKey);
     }
 
     public MarketRefreshResultDto refreshAllStocks(boolean force) {
@@ -144,6 +159,10 @@ public class MarketDataService {
         stock.setDataSource("LIVE");
         stock.setLastUpdated(LocalDateTime.now());
         stockRepository.save(stock);
+
+        if (stockSummaryService != null) {
+            stockSummaryService.evictCache();
+        }
     }
 
     @Scheduled(cron = "${app.marketdata.cron:0 0 18 * * MON-FRI}")

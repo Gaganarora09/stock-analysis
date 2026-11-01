@@ -27,7 +27,7 @@ A full-stack Spring Boot 3 web application providing automated technical indicat
 
 - **Algorithmic Signal Engine**: Evaluates 5-day vs 20-day Simple Moving Average (SMA) crossovers combined with 14-period Relative Strength Index (RSI) to generate actionable **BUY**, **HOLD**, and **SELL** recommendations.
 - **7-Day Price Forecast**: Computes ordinary least squares linear regression trends over the past 20 trading closes and projects the next 7 market days, skipping Saturdays and Sundays.
-- **Equities Dashboard**: Real-time summary metrics across all tracked equities, instant search, and one-click filtering by signal (All / BUY / HOLD / SELL / Watchlist).
+- **Equities Dashboard**: Real-time summary metrics across all tracked equities, instant search, and one-click filtering by signal (All / BUY / HOLD / SELL / Watchlist). Backed by a high-performance single-request aggregated endpoint (`GET /api/stocks/summary`) with 60-second in-memory caching and batched eager price fetching.
 - **Interactive Multi-Chart View**:
   - Main price chart overlaying historical closes, SMA5, SMA20, and dashed 7-day forecast.
   - RSI(14) oscillator chart with 30 (oversold) and 70 (overbought) threshold bounds.
@@ -124,6 +124,7 @@ export ALPHAVANTAGE_API_KEY=your_alpha_vantage_api_key_here
 
 ### Equities & Technical Analysis (Requires Auth)
 - `GET /api/stocks` — List all registered equities.
+- `GET /api/stocks/summary` — Aggregated dashboard summary returning all equities, latest prices, daily percent changes, BUY/HOLD/SELL signals, reasons, and data provenance in a single payload (60s TTL cache with eager batched fetching).
 - `GET /api/stocks/{symbol}` — Retrieve metadata for a single equity.
 - `GET /api/stocks/{symbol}/prices` — Historical OHLCV price series.
 - `GET /api/stocks/{symbol}/analysis` — Technical indicators (SMA5, SMA20, RSI14, volatility, BUY/HOLD/SELL recommendation, and data source provenance).
@@ -190,7 +191,7 @@ The project includes an automated test suite combining unit tests with Mockito a
 mvn clean test
 ```
 
-### Coverage Overview (39 Automated Tests)
+### Coverage Overview (50 Automated Tests)
 
 1. **`AnalysisServiceTest` (6 unit tests)**:
    - Technical indicators: SMA5, SMA20, RSI(14), daily % change, historical high/low, and volatility.
@@ -210,14 +211,22 @@ mvn clean test
    - Failure fallback: retains existing prices when client throws connection/parsing exceptions.
    - Rate limit halting: immediately breaks loop and skips subsequent equities upon encountering rate limits (25 req/day).
    - Disabled/missing key check: performs zero external network calls when disabled or unconfigured.
-5. **`AuthAndSecurityIT` (16 integration tests)**:
-   - Security boundaries: `/api/stocks` and `/api/watchlist` require authentication (return 401 unauthenticated).
+5. **`StockSummaryServiceTest` (4 unit tests)**:
+   - Batch summary computation: maps multiple stocks and prices in 2 database queries without N+1 calls.
+   - 60-second in-memory caching: guarantees subsequent requests do not re-query the database while cache is fresh.
+   - Cache eviction: verifies explicit cache invalidation when stocks are created, deleted, or refreshed.
+   - Empty dataset resilience: returns an empty list gracefully when no stocks exist in the database.
+6. **`AuthAndSecurityIT` (23 integration tests)**:
+   - Security boundaries: `/api/stocks`, `/api/stocks/summary`, and `/api/watchlist` require authentication (return 401 unauthenticated).
    - HTTP Basic auth: valid credentials (`admin:admin123`) return 200 OK.
+   - Aggregated summary: authenticated `GET /api/stocks/summary` returns all stock metrics and signals in a single payload.
    - Public web resources: `/login.html` is accessible without authentication (returns 200 OK).
    - Form validation: valid registration succeeds (201 Created); invalid payloads return 400 Bad Request with field errors.
    - Role boundaries: `admin` gets 200 OK and `alice` gets 403 Forbidden on `/api/admin/users` and `/api/admin/market/refresh`; unauthenticated requests get 401.
    - Registration role lock: registrations always assign `ROLE_USER` and cannot create admin accounts.
    - Admin stock management: `POST /api/admin/stocks` creates stock and 60 daily prices; duplicate symbols rejected with 409 Conflict.
+   - Symbol format validation: rejects lowercase letters, spaces, and invalid characters with 400 Bad Request; accepts uppercase symbols with dots and hyphens.
+   - Sequence advancement: adding stocks and registering users after database seeding succeeds without primary key sequence collisions.
    - Cascade deletion: `DELETE /api/admin/stocks/{symbol}` cleanly purges stock, its prices, and watchlist records without orphan rows.
 
 ---

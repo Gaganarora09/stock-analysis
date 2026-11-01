@@ -237,4 +237,112 @@ class AuthAndSecurityIT {
                 .andExpect(jsonPath("$.skipped").isNumber())
                 .andExpect(jsonPath("$.failed").isNumber());
     }
+
+    @Test
+    @DisplayName("Admin POST /api/admin/stocks rejects lowercase symbols with 400 Bad Request")
+    void adminStocks_lowercaseSymbol_isRejected() throws Exception {
+        CreateStockRequest req = new CreateStockRequest("hal", "Hindustan Aeronautics Ltd", "Defense", BigDecimal.valueOf(3800.0));
+
+        mockMvc.perform(post("/api/admin/stocks")
+                        .with(httpBasic("admin", "admin123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.fieldErrors.symbol").value(org.hamcrest.Matchers.containsString("lowercase")));
+    }
+
+    @Test
+    @DisplayName("Admin POST /api/admin/stocks rejects symbols with spaces with 400 Bad Request")
+    void adminStocks_symbolWithSpaces_isRejected() throws Exception {
+        CreateStockRequest req = new CreateStockRequest("HCL TECH", "HCL Tech Ltd", "IT", BigDecimal.valueOf(1400.0));
+
+        mockMvc.perform(post("/api/admin/stocks")
+                        .with(httpBasic("admin", "admin123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.fieldErrors.symbol").value(org.hamcrest.Matchers.containsString("spaces")));
+    }
+
+    @Test
+    @DisplayName("Admin POST /api/admin/stocks rejects symbols exceeding 15 characters")
+    void adminStocks_symbolTooLong_isRejected() throws Exception {
+        CreateStockRequest req = new CreateStockRequest("VERYLONGSYMBOL123", "Too Long Corp", "Tech", BigDecimal.valueOf(100.0));
+
+        mockMvc.perform(post("/api/admin/stocks")
+                        .with(httpBasic("admin", "admin123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    @DisplayName("Admin POST /api/admin/stocks accepts valid symbols with dots and hyphens")
+    void adminStocks_symbolWithDotAndHyphen_isAccepted() throws Exception {
+        CreateStockRequest req = new CreateStockRequest("M-M.BSE", "Mahindra & Mahindra Ltd", "Automotive", BigDecimal.valueOf(2800.0));
+
+        mockMvc.perform(post("/api/admin/stocks")
+                        .with(httpBasic("admin", "admin123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.symbol").value("M-M.BSE"));
+
+        assertThat(stockRepository.findBySymbol("M-M.BSE")).isPresent();
+        assertThat(stockPriceRepository.findByStockSymbolOrderByPriceDateDesc("M-M.BSE")).hasSize(60);
+    }
+
+    @Test
+    @DisplayName("Adding stocks and registering users after seeding succeeds without ID collisions")
+    void postSeeding_sequentialInserts_succeedWithoutCollisions() throws Exception {
+        // 1. Add new stock after seeded data (1..10)
+        CreateStockRequest stockReq = new CreateStockRequest("BHEL", "Bharat Heavy Electricals", "Power", BigDecimal.valueOf(250.0));
+        mockMvc.perform(post("/api/admin/stocks")
+                        .with(httpBasic("admin", "admin123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(stockReq)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.greaterThan(10)));
+
+        Stock bhel = stockRepository.findBySymbol("BHEL").orElseThrow();
+        assertThat(bhel.getId()).isGreaterThan(10L);
+        assertThat(stockPriceRepository.findByStockSymbolOrderByPriceDateDesc("BHEL")).hasSize(60);
+
+        // 2. Register user after seeded users (admin, alice, bob)
+        RegisterRequest userReq = new RegisterRequest("post_seed_user", "ValidPass123!", "postseed@example.com");
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userReq)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("post_seed_user"));
+
+        User savedUser = userRepository.findByUsername("post_seed_user").orElseThrow();
+        assertThat(savedUser.getId()).isGreaterThan(3L);
+    }
+
+    @Test
+    @DisplayName("GET /api/stocks/summary without authentication returns 401 Unauthorized")
+    void summary_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/stocks/summary"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /api/stocks/summary with valid credentials returns all stocks with signals and metrics")
+    void summary_authenticated_returnsConsolidatedSummary() throws Exception {
+        mockMvc.perform(get("/api/stocks/summary").with(httpBasic("alice", "alice123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(10)))
+                .andExpect(jsonPath("$[0].symbol").exists())
+                .andExpect(jsonPath("$[0].companyName").exists())
+                .andExpect(jsonPath("$[0].sector").exists())
+                .andExpect(jsonPath("$[0].latestPrice").isNumber())
+                .andExpect(jsonPath("$[0].percentageChange").isNumber())
+                .andExpect(jsonPath("$[0].signal").value(org.hamcrest.Matchers.oneOf("BUY", "HOLD", "SELL")))
+                .andExpect(jsonPath("$[0].dataSource").value("SAMPLE"));
+    }
 }

@@ -122,6 +122,46 @@ public class AnalysisService {
                 .build();
     }
 
+    public com.hcl.stockanalysis.dto.StockSummaryDto summarizeStock(com.hcl.stockanalysis.entity.Stock stock, List<StockPrice> sortedAsc) {
+        if (sortedAsc == null || sortedAsc.isEmpty()) {
+            return new com.hcl.stockanalysis.dto.StockSummaryDto(
+                    stock.getSymbol(),
+                    stock.getCompanyName(),
+                    stock.getSector(),
+                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                    "HOLD",
+                    "No price history available",
+                    stock.getDataSource(),
+                    stock.getLastUpdated()
+            );
+        }
+
+        int n = sortedAsc.size();
+        StockPrice latestPriceObj = sortedAsc.get(n - 1);
+        BigDecimal latestClose = latestPriceObj.getClosePrice();
+        BigDecimal previousClose = (n > 1) ? sortedAsc.get(n - 2).getClosePrice() : latestClose;
+
+        BigDecimal percentageChange = calculatePercentageChange(previousClose, latestClose);
+        BigDecimal ma5 = calculateMovingAverage(sortedAsc, 5);
+        BigDecimal ma20 = calculateMovingAverage(sortedAsc, 20);
+        BigDecimal rsi14 = calculateRSI(sortedAsc, 14);
+
+        String[] signalAndReason = generateSignal(latestClose, ma5, ma20, rsi14, percentageChange);
+
+        return new com.hcl.stockanalysis.dto.StockSummaryDto(
+                stock.getSymbol(),
+                stock.getCompanyName(),
+                stock.getSector(),
+                latestClose,
+                percentageChange,
+                signalAndReason[0],
+                signalAndReason[1],
+                stock.getDataSource(),
+                stock.getLastUpdated()
+        );
+    }
+
     public PredictionDto predictStock(String symbol) {
         var stock = stockRepository.findBySymbol(symbol.toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Stock not found: " + symbol));

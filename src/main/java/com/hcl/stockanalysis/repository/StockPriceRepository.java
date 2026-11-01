@@ -25,4 +25,7 @@ public interface StockPriceRepository extends JpaRepository<StockPrice, Long> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    @Query("SELECT sp FROM StockPrice sp JOIN FETCH sp.stock ORDER BY sp.priceDate ASC")
+    List<StockPrice> findAllPricesWithStockAsc();
 }

@@ -29,20 +29,27 @@ public class AdminService {
     private final StockPriceRepository stockPriceRepository;
     private final WatchlistRepository watchlistRepository;
     private final UserRepository userRepository;
+    private final StockSummaryService stockSummaryService;
 
     public AdminService(StockRepository stockRepository,
                         StockPriceRepository stockPriceRepository,
                         WatchlistRepository watchlistRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        StockSummaryService stockSummaryService) {
         this.stockRepository = stockRepository;
         this.stockPriceRepository = stockPriceRepository;
         this.watchlistRepository = watchlistRepository;
         this.userRepository = userRepository;
+        this.stockSummaryService = stockSummaryService;
     }
 
     @Transactional
     public StockDto createStock(CreateStockRequest request) {
-        String symbol = request.getSymbol().trim().toUpperCase();
+        String rawSymbol = request.getSymbol();
+        if (rawSymbol == null || !rawSymbol.matches("^[A-Z0-9.-]{1,15}$")) {
+            throw new IllegalArgumentException("Symbol must contain letters, digits, dot and hyphen only, up to 15 characters, converted to uppercase (no spaces or lowercase letters)");
+        }
+        String symbol = rawSymbol.trim();
         if (stockRepository.existsBySymbol(symbol)) {
             throw new StockAlreadyExistsException("Stock with symbol already exists: " + symbol);
         }
@@ -60,6 +67,8 @@ public class AdminService {
         List<StockPrice> prices = generatePrices(savedStock, request.getStartingPrice(), 60);
         stockPriceRepository.saveAll(prices);
 
+        stockSummaryService.evictCache();
+
         return new StockDto(savedStock.getId(), savedStock.getSymbol(), savedStock.getCompanyName(), savedStock.getSector(), savedStock.getDataSource(), savedStock.getLastUpdated());
     }
 
@@ -76,6 +85,8 @@ public class AdminService {
 
         // Delete stock
         stockRepository.delete(stock);
+
+        stockSummaryService.evictCache();
     }
 
     public List<UserSummaryDto> getAllUsers() {
