@@ -117,6 +117,8 @@ public class AnalysisService {
                 .sma20Series(sma20Series)
                 .signal(signalAndReason[0])
                 .signalReason(signalAndReason[1])
+                .dataSource(stock.getDataSource())
+                .lastUpdated(stock.getLastUpdated())
                 .build();
     }
 

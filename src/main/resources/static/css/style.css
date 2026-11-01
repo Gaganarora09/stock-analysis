@@ -320,6 +320,18 @@ body {
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
+.badge-live {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.badge-sample {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
 /* Summary Grid */
 .summary-bar {
   display: grid;

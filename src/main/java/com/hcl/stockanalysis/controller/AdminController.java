@@ -1,9 +1,11 @@
 package com.hcl.stockanalysis.controller;
 
 import com.hcl.stockanalysis.dto.CreateStockRequest;
+import com.hcl.stockanalysis.dto.MarketRefreshResultDto;
 import com.hcl.stockanalysis.dto.StockDto;
 import com.hcl.stockanalysis.dto.UserSummaryDto;
 import com.hcl.stockanalysis.service.AdminService;
+import com.hcl.stockanalysis.service.MarketDataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -24,9 +26,11 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final MarketDataService marketDataService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, MarketDataService marketDataService) {
         this.adminService = adminService;
+        this.marketDataService = marketDataService;
     }
 
     @PostMapping("/stocks")
@@ -49,5 +53,11 @@ public class AdminController {
     @Operation(summary = "Get list of all registered users with usernames and roles (Admin only)")
     public ResponseEntity<List<UserSummaryDto>> getAllUsers() {
         return ResponseEntity.ok(adminService.getAllUsers());
+    }
+
+    @PostMapping("/market/refresh")
+    @Operation(summary = "Manually trigger live market data refresh from Alpha Vantage (Admin only)")
+    public ResponseEntity<MarketRefreshResultDto> refreshMarketData() {
+        return ResponseEntity.ok(marketDataService.refreshAllStocks(true));
     }
 }

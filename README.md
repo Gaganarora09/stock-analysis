@@ -1,6 +1,6 @@
 # StockAnalysis — Intelligent Equity Analytics & Forecasting Platform
 
-A full-stack Spring Boot 3 web application providing automated technical indicator analysis, momentum-based BUY/HOLD/SELL signals, and 7-day predictive linear regression price forecasting for top Indian equities.
+A full-stack Spring Boot 3 web application providing automated technical indicator analysis, momentum-based BUY/HOLD/SELL signals, 7-day predictive linear regression price forecasting, per-user watchlists, admin equity management, and live market data synchronization with safe fallback for top Indian equities.
 
 ---
 
@@ -14,6 +14,7 @@ A full-stack Spring Boot 3 web application providing automated technical indicat
 | **Persistence & ORM** | Spring Data JPA / Hibernate | 6.4.x |
 | **Database (Dev/Local)** | H2 Database | File-based mode (`./data/stockdb`) |
 | **Database (Prod)** | PostgreSQL | Configured via `application-prod.properties` |
+| **External Market Data** | Alpha Vantage API | REST client with resilient offline fallback |
 | **API Documentation** | Springdoc OpenAPI (Swagger UI) | 2.3.0 |
 | **Validation** | Jakarta Bean Validation | Hibernate Validator |
 | **Frontend** | Vanilla HTML5 / CSS3 / ES6+ JavaScript | Modern dark theme, zero build dependencies |
@@ -25,15 +26,15 @@ A full-stack Spring Boot 3 web application providing automated technical indicat
 ## Key Features
 
 - **Algorithmic Signal Engine**: Evaluates 5-day vs 20-day Simple Moving Average (SMA) crossovers combined with 14-period Relative Strength Index (RSI) to generate actionable **BUY**, **HOLD**, and **SELL** recommendations.
-- **7-Day Price Forecast**: Computes linear regression trends over the past 20 trading closes and projects the next 7 market days, skipping Saturdays and Sundays.
-- **Equities Dashboard**: Real-time summary metrics across all 10 tracked equities, instant search, and one-click filtering by signal (All / BUY / HOLD / SELL).
+- **7-Day Price Forecast**: Computes ordinary least squares linear regression trends over the past 20 trading closes and projects the next 7 market days, skipping Saturdays and Sundays.
+- **Equities Dashboard**: Real-time summary metrics across all tracked equities, instant search, and one-click filtering by signal (All / BUY / HOLD / SELL / Watchlist).
 - **Interactive Multi-Chart View**:
   - Main price chart overlaying historical closes, SMA5, SMA20, and dashed 7-day forecast.
   - RSI(14) oscillator chart with 30 (oversold) and 70 (overbought) threshold bounds.
   - Side-by-side stock comparison overlaying a secondary ticker onto a distinct right-hand Y-axis.
-- **User Authentication**: Secure BCrypt-hashed password storage, HTTP Basic authentication with popup-suppressed 401 handling, and session persistence.
 - **Per-User Watchlist**: Personalized stock watchlists per user, with one-click star toggle on the dashboard, dedicated "My Watchlist" filter tab, and header controls on the analytics page.
-- **Admin Management Console (`admin.html`)**: Dedicated console for `ROLE_ADMIN` users to provision new equities with automated 60-day historical price synthesis, delete assets with full cascade purging, and review registered platform accounts.
+- **Live Market Data with Safe Fallback**: Alpha Vantage API integration with upsert capability for daily closes, intelligent daily rate-limit throttling (25 requests/day), automated `@Scheduled` background sync, and 100% resilient fallback to sample data on errors or missing API keys.
+- **Admin Management Console (`admin.html`)**: Dedicated console for `ROLE_ADMIN` users to provision new equities with automated 60-day historical price synthesis, trigger on-demand market data sync, delete assets with full cascade purging, and review registered platform accounts.
 - **Dual Database Architecture**: Zero-setup embedded H2 database for local development and PostgreSQL-ready configuration for cloud deployments.
 
 ---
@@ -52,8 +53,6 @@ The application tracks 10 prominent Indian equities across key sectors:
 8. **SBIN** — State Bank of India (*Banking & Financial Services*)
 9. **ITC** — ITC Ltd (*Consumer Goods*)
 10. **TECHM** — Tech Mahindra Ltd (*Information Technology*)
-
-> **Note on Data**: The 60 days of historical Open, High, Low, Close, and Volume (OHLCV) price points populated in `data.sql` are realistic sample datasets generated for educational and evaluation purposes. They do not represent live market feeds.
 
 ---
 
@@ -75,9 +74,9 @@ $$\text{Score} = S_{\text{SMA}} + S_{\text{RSI}}$$
 
 | Composite Score | Signal | Interpretation |
 |---|---|---|
-| **$\ge +1$** | <span style="color:#10b981;font-weight:bold;">BUY</span> | Favorable momentum and moving average alignment |
-| **$0$** | <span style="color:#f59e0b;font-weight:bold;">HOLD</span> | Consolidation or balanced indicator signals |
-| **$\le -1$** | <span style="color:#ef4444;font-weight:bold;">SELL</span> | Bearish momentum or overextended indicator conditions |
+| **$\ge +1$** | BUY | Favorable momentum and moving average alignment |
+| **$0$** | HOLD | Consolidation or balanced indicator signals |
+| **$\le -1$** | SELL | Bearish momentum or overextended indicator conditions |
 
 ### 2. 7-Day Linear Regression Prediction
 The predictive model calculates the ordinary least squares (OLS) linear trend on the closing prices of the most recent $N=20$ trading sessions:
@@ -88,248 +87,100 @@ For day steps $k = 1, \dots, 7$, the projection $\hat{y}_k = m \cdot (N - 1 + k)
 
 ---
 
+## Live Market Data & Safe Fallback Engine (Alpha Vantage)
+
+The platform supports live market data integration with Alpha Vantage while maintaining a 100% resilient fallback guarantee:
+
+### 1. Configuration & Secrets Handling
+API configuration is managed via environment variables and application properties without hardcoded secrets:
+
+| Property | Environment Variable | Default | Description |
+|---|---|---|---|
+| `app.marketdata.enabled` | `MARKETDATA_ENABLED` | `false` | Master toggle for live market queries |
+| `app.marketdata.api-key` | `ALPHAVANTAGE_API_KEY` | `""` | Alpha Vantage API key (never logged or exposed) |
+| `app.marketdata.symbol-suffix` | — | `.BSE` | Exchange suffix for Indian tickers (e.g. `HCLTECH.BSE`) |
+| `app.marketdata.cron` | — | `0 0 18 * * MON-FRI` | Automated weekday closing bell refresh schedule |
+
+To activate live feeds locally or in production, set the environment variable:
+```bash
+export ALPHAVANTAGE_API_KEY=your_alpha_vantage_api_key_here
+```
+
+### 2. Safe Fallback & Rate Limit Resilience
+- **Zero Startup Blocking**: The service checks for stale data asynchronously on startup without blocking server boot.
+- **Graceful Error Recovery**: If the API key is missing, network is unreachable, or response is invalid, the engine logs a brief one-line warning and immediately retains existing prices. It never crashes, throws unhandled 500 errors, or deletes database records.
+- **25 Requests/Day Free-Tier Protection**: Alpha Vantage free tiers allow 25 calls per day. On the first `"Note"` or `"Information"` rate-limit payload from Alpha Vantage, the engine catches `RateLimitExceededException` and halts all subsequent calls for the rest of the day, preserving existing data.
+- **Daily Throttling**: Stocks are updated at most once per calendar day unless an admin explicitly requests a force refresh.
+- **Transparent Data Provenance**: Every equity and analysis response includes `dataSource` (`"LIVE"` vs `"SAMPLE"`) and `lastUpdated`, which are displayed as visual badges on the dashboard, detail pages, and admin console.
+
+---
+
+## API Endpoints
+
+### Authentication & User
+- `POST /api/auth/register` — Register a new account (`ROLE_USER` assigned automatically).
+- `POST /api/auth/login` — Authenticate and retrieve user profile.
+- `GET /api/auth/me` — Inspect currently authenticated user session.
+
+### Equities & Technical Analysis (Requires Auth)
+- `GET /api/stocks` — List all registered equities.
+- `GET /api/stocks/{symbol}` — Retrieve metadata for a single equity.
+- `GET /api/stocks/{symbol}/prices` — Historical OHLCV price series.
+- `GET /api/stocks/{symbol}/analysis` — Technical indicators (SMA5, SMA20, RSI14, volatility, BUY/HOLD/SELL recommendation, and data source provenance).
+- `GET /api/stocks/{symbol}/prediction` — 7-day linear regression forecast (skips weekends).
+
+### Watchlist (Requires Auth)
+- `GET /api/watchlist` — Retrieve the current user's personal watchlist.
+- `POST /api/watchlist/{symbol}` — Add equity to current user's watchlist (idempotent).
+- `DELETE /api/watchlist/{symbol}` — Remove equity from current user's watchlist.
+
+### Admin Management (Requires `ROLE_ADMIN`)
+- `POST /api/admin/stocks` — Provision a new equity asset and synthesize 60 days of continuous price data.
+- `DELETE /api/admin/stocks/{symbol}` — Cascade delete an equity, its historical prices, and referencing watchlist records.
+- `GET /api/admin/users` — List platform user accounts (passwords never exposed).
+- `POST /api/admin/market/refresh` — Trigger an on-demand market data sync with Alpha Vantage across all equities.
+
+---
+
+## Test Accounts & Credentials
+
+The application initializes with three pre-configured accounts in `data.sql`:
+
+| Username | Password | Role | Description |
+|---|---|---|---|
+| `admin` | `admin123` | `ROLE_ADMIN` | Platform administrator with asset & sync management |
+| `alice` | `alice123` | `ROLE_USER` | Regular market analyst account |
+| `bob` | `bob123` | `ROLE_USER` | Regular market analyst account |
+
+---
+
 ## How to Run Locally
 
 ### Prerequisites
-- Java 17 or higher
-- Apache Maven 3.8+ (or use the configured wrapper)
+- Java 17 LTS or higher
+- Apache Maven 3.8+
 
 ### Execution
 
 ```bash
-# Clone and navigate into the project directory
+# Navigate to the project directory
 cd stock-analysis
 
-# Build and run with Spring Boot
-mvn spring-boot:run
+# Compile, run tests, and package
+mvn clean package
+
+# Run the Spring Boot application
+java -jar target/stock-analysis-0.0.1-SNAPSHOT.jar
 ```
 
-Once started, open your web browser:
-- **Application Portal**: [http://localhost:8080/login.html](http://localhost:8080/login.html)
-- **Interactive Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **OpenAPI Schema**: [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
-- **H2 Database Console**: [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
-  - JDBC URL: `jdbc:h2:file:./data/stockdb`
-  - Username: `sa`
-  - Password: *(leave blank)*
+Access the application in your browser:
+- **Web App**: http://localhost:8080/login.html
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:8080/api-docs
 
 ---
 
-## Test Accounts
-
-The local database initializes with three pre-configured accounts:
-
-| Username | Password | Role | Description |
-|---|---|---|---|
-| `admin` | `admin123` | `ROLE_ADMIN` | Administrator account |
-| `alice` | `alice123` | `ROLE_USER` | Standard trader account |
-| `bob` | `bob123` | `ROLE_USER` | Standard analyst account |
-
-New users can also self-register at [http://localhost:8080/register.html](http://localhost:8080/register.html).
-
----
-
-## REST API Reference
-
-All `/api/stocks/**` endpoints require HTTP Basic authentication (`username:password`).
-
-### 1. Authentication Endpoints (Public)
-
-#### Register User
-- **URL**: `POST /api/auth/register`
-- **Request Body**:
-  ```json
-  {
-    "username": "newtrader",
-    "password": "password123",
-    "email": "trader@example.com"
-  }
-  ```
-- **Response** (`201 Created`):
-  ```json
-  {
-    "message": "User registered successfully",
-    "username": "newtrader",
-    "role": "ROLE_USER"
-  }
-  ```
-
-#### Login User
-- **URL**: `POST /api/auth/login`
-- **Request Body**:
-  ```json
-  {
-    "username": "alice",
-    "password": "alice123"
-  }
-  ```
-- **Response** (`200 OK`):
-  ```json
-  {
-    "message": "Login successful",
-    "username": "alice",
-    "role": "ROLE_USER"
-  }
-  ```
-
----
-
-### 2. Stocks & Analysis Endpoints (Protected)
-
-#### Get All Stocks
-- **URL**: `GET /api/stocks`
-- **Response** (`200 OK`):
-  ```json
-  [
-    {
-      "id": 1,
-      "symbol": "HCLTECH",
-      "companyName": "HCL Technologies Ltd",
-      "sector": "Information Technology"
-    },
-    ...
-  ]
-  ```
-
-#### Get Stock Historical Prices
-- **URL**: `GET /api/stocks/{symbol}/prices`
-- **Response** (`200 OK`): Array of 60 OHLCV price records ordered by date descending.
-
-#### Get Technical Analysis & Signals
-- **URL**: `GET /api/stocks/{symbol}/analysis`
-- **Sample Response** (`200 OK`):
-  ```json
-  {
-    "symbol": "HCLTECH",
-    "companyName": "HCL Technologies Ltd",
-    "latestClosePrice": 1229.21,
-    "percentageChange": -0.14,
-    "movingAverage5Day": 1227.04,
-    "movingAverage20Day": 1215.20,
-    "highestPrice": 1246.23,
-    "lowestPrice": 1196.70,
-    "rsi14": 64.62,
-    "volatility": 0.29,
-    "dates": ["2024-08-02", ..., "2024-09-30"],
-    "closePrices": [1242.54, ..., 1229.21],
-    "sma5Series": [1242.54, ..., 1227.04],
-    "sma20Series": [1242.54, ..., 1215.20],
-    "signal": "BUY",
-    "signalReason": "SMA5 above SMA20 and RSI 64.62 (neutral) (Score 1)"
-  }
-  ```
-
-#### Get 7-Day Linear Price Prediction
-- **URL**: `GET /api/stocks/{symbol}/prediction`
-- **Sample Response** (`200 OK`):
-  ```json
-  {
-    "symbol": "HCLTECH",
-    "companyName": "HCL Technologies Ltd",
-    "trend": "UP",
-    "currentPrice": 1229.21,
-    "predictedFinalPrice": 1242.76,
-    "predictedChangePercent": 1.10,
-    "predictions": [
-      { "date": "2024-10-01", "predictedPrice": 1232.74 },
-      { "date": "2024-10-02", "predictedPrice": 1234.41 },
-      { "date": "2024-10-03", "predictedPrice": 1236.08 },
-      { "date": "2024-10-04", "predictedPrice": 1237.75 },
-      { "date": "2024-10-07", "predictedPrice": 1239.42 },
-      { "date": "2024-10-08", "predictedPrice": 1241.09 },
-      { "date": "2024-10-09", "predictedPrice": 1242.76 }
-    ]
-  }
-  ```
-
----
-
-### 3. Watchlist Endpoints (Protected)
-
-#### Get Current User Watchlist
-- **URL**: `GET /api/watchlist`
-- **Description**: Returns all equities currently saved in the authenticated user's watchlist.
-- **Response** (`200 OK`):
-  ```json
-  [
-    {
-      "symbol": "HCLTECH",
-      "companyName": "HCL Technologies Ltd",
-      "sector": "Information Technology"
-    },
-    {
-      "symbol": "TCS",
-      "companyName": "Tata Consultancy Services Ltd",
-      "sector": "Information Technology"
-    }
-  ]
-  ```
-
-#### Add Stock to Watchlist
-- **URL**: `POST /api/watchlist/{symbol}`
-- **Description**: Adds the specified stock to the authenticated user's watchlist. Idempotent (succeeds with 200 OK if already present). Returns 404 if the symbol is not recognized.
-- **Response** (`200 OK`)
-
-#### Remove Stock from Watchlist
-- **URL**: `DELETE /api/watchlist/{symbol}`
-- **Description**: Removes the specified stock from the authenticated user's watchlist.
-- **Response** (`204 No Content`)
-
----
-
-### 4. Admin Endpoints (ROLE_ADMIN Only)
-
-All endpoints under `/api/admin/**` require authentication with the `ROLE_ADMIN` authority. Requests from unauthenticated clients return `401 Unauthorized`, and requests from non-admin authenticated users (`ROLE_USER`) return `403 Forbidden`.
-
-#### Create Stock with 60-Day Price Synthesis
-- **URL**: `POST /api/admin/stocks`
-- **Request Body**:
-  ```json
-  {
-    "symbol": "BEL",
-    "name": "Bharat Electronics Ltd",
-    "sector": "Aerospace & Defense",
-    "startingPrice": 290.00
-  }
-  ```
-- **Description**: Validates that the symbol is unique (rejects duplicates with `409 Conflict`), creates the stock, and automatically synthesizes 60 days of realistic daily closing prices (random walk) so that moving averages, RSI, signals, and charts work immediately.
-- **Response** (`201 Created`):
-  ```json
-  {
-    "id": 100,
-    "symbol": "BEL",
-    "companyName": "Bharat Electronics Ltd",
-    "sector": "Aerospace & Defense"
-  }
-  ```
-
-#### Delete Stock & Cascade Purge
-- **URL**: `DELETE /api/admin/stocks/{symbol}`
-- **Description**: Deletes the specified stock along with its historical prices and all referencing watchlist records in a single transactional operation, preventing foreign key constraint violations and orphan records on both H2 and PostgreSQL. Returns `404 Not Found` if the symbol does not exist.
-- **Response** (`204 No Content`)
-
-#### Get Platform Users (Read-Only)
-- **URL**: `GET /api/admin/users`
-- **Description**: Returns all registered platform users with their username, email, and role. Password hashes are strictly omitted.
-- **Response** (`200 OK`):
-  ```json
-  [
-    {
-      "username": "admin",
-      "role": "ROLE_ADMIN",
-      "email": "admin@hcl.com"
-    },
-    {
-      "username": "alice",
-      "role": "ROLE_USER",
-      "email": "alice@hcl.com"
-    }
-  ]
-  ```
-
----
-
-## Testing
+## Automated Testing
 
 The project includes an automated test suite combining unit tests with Mockito and full-context integration tests with Spring Boot Test and MockMvc. All tests execute against an isolated in-memory H2 database (`application-test.properties`), ensuring determinism without impacting local or production databases.
 
@@ -339,7 +190,7 @@ The project includes an automated test suite combining unit tests with Mockito a
 mvn clean test
 ```
 
-### Coverage Overview (31 Automated Tests)
+### Coverage Overview (39 Automated Tests)
 
 1. **`AnalysisServiceTest` (6 unit tests)**:
    - Technical indicators: SMA5, SMA20, RSI(14), daily % change, historical high/low, and volatility.
@@ -353,12 +204,18 @@ mvn clean test
    - Watchlist additions and idempotent duplicate requests (no duplicate entries saved).
    - Watchlist deletions and unknown stock symbol handling.
    - User isolation: ensures each user only accesses their own watchlist items.
-4. **`AuthAndSecurityIT` (13 integration tests)**:
+4. **`MarketDataServiceTest` (5 unit tests)**:
+   - New date upserting: inserts new daily close rows when price dates do not yet exist.
+   - Existing date updating: updates existing closing price records without creating duplicates.
+   - Failure fallback: retains existing prices when client throws connection/parsing exceptions.
+   - Rate limit halting: immediately breaks loop and skips subsequent equities upon encountering rate limits (25 req/day).
+   - Disabled/missing key check: performs zero external network calls when disabled or unconfigured.
+5. **`AuthAndSecurityIT` (16 integration tests)**:
    - Security boundaries: `/api/stocks` and `/api/watchlist` require authentication (return 401 unauthenticated).
    - HTTP Basic auth: valid credentials (`admin:admin123`) return 200 OK.
    - Public web resources: `/login.html` is accessible without authentication (returns 200 OK).
    - Form validation: valid registration succeeds (201 Created); invalid payloads return 400 Bad Request with field errors.
-   - Role boundaries: `admin` gets 200 OK and `alice` gets 403 Forbidden on `/api/admin/users`; unauthenticated requests get 401.
+   - Role boundaries: `admin` gets 200 OK and `alice` gets 403 Forbidden on `/api/admin/users` and `/api/admin/market/refresh`; unauthenticated requests get 401.
    - Registration role lock: registrations always assign `ROLE_USER` and cannot create admin accounts.
    - Admin stock management: `POST /api/admin/stocks` creates stock and 60 daily prices; duplicate symbols rejected with 409 Conflict.
    - Cascade deletion: `DELETE /api/admin/stocks/{symbol}` cleanly purges stock, its prices, and watchlist records without orphan rows.
@@ -387,12 +244,13 @@ When deploying to container cloud providers (Render, Railway, Fly.io, AWS ECS, o
    ```bash
    SPRING_PROFILES_ACTIVE=prod
    ```
-2. Provide the following database environment variables:
+2. Provide the following database and API environment variables:
    ```bash
    DB_URL=jdbc:postgresql://<db-host>:<db-port>/<database-name>
    DB_USERNAME=<db-username>
    DB_PASSWORD=<db-password>
    PORT=8080
+   ALPHAVANTAGE_API_KEY=<optional-api-key>
    ```
 3. Run the container or JAR artifact:
    ```bash
@@ -404,12 +262,11 @@ When deploying to container cloud providers (Render, Railway, Fly.io, AWS ECS, o
 ## Future Improvements
 
 - **Google OAuth2 / Social Login**: Integrate Spring Security OAuth2 Client for single-sign-on (SSO) with Google and GitHub accounts alongside the current username/password authentication.
-- **Live Stock API Integration**: Connect to live market data providers (e.g., Alpha Vantage, Yahoo Finance, or NSE/BSE real-time feeds) via WebSockets.
-- **Advanced Technical Indicators**: Expand analytical suite with MACD (Moving Average Convergence Divergence), Bollinger Bands, and Stochastic Oscillators.
-- **User Watchlist & Portfolio Tracking**: Enable registered users to maintain custom portfolios and price alert notifications.
+- **WebSocket Price Ticker**: Stream tick-by-tick real-time price updates directly to the client browser.
+- **Advanced Technical Indicators**: Expand analytical suite with MACD (Moving Average Convergence Divergence) and Bollinger Bands.
 
 ---
 
 ## Disclaimer
 
-**Educational purposes only, not financial advice.** All analyses, calculations, and price projections are algorithmic estimations based on sample data and should not be used as investment advice.
+**Educational purposes only, not financial advice.** All analyses, calculations, and price projections are algorithmic estimations based on sample and market data and should not be used as investment advice.

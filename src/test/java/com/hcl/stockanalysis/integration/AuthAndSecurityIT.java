@@ -212,4 +212,29 @@ class AuthAndSecurityIT {
         assertThat(stockPriceRepository.findByStockSymbolOrderByPriceDateDesc("DELCORP")).isEmpty();
         assertThat(watchlistRepository.existsByUserAndStock(admin, stock)).isFalse();
     }
+
+    @Test
+    @DisplayName("POST /api/admin/market/refresh without auth returns 401 Unauthorized")
+    void refreshMarket_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(post("/api/admin/market/refresh"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/admin/market/refresh as normal user returns 403 Forbidden")
+    void refreshMarket_asUser_returns403() throws Exception {
+        mockMvc.perform(post("/api/admin/market/refresh").with(httpBasic("alice", "alice123")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("POST /api/admin/market/refresh as admin returns 200 OK with sync result")
+    void refreshMarket_asAdmin_returns200() throws Exception {
+        mockMvc.perform(post("/api/admin/market/refresh").with(httpBasic("admin", "admin123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.updated").isNumber())
+                .andExpect(jsonPath("$.skipped").isNumber())
+                .andExpect(jsonPath("$.failed").isNumber());
+    }
 }

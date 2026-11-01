@@ -51,6 +51,8 @@ public class AdminService {
                 .symbol(symbol)
                 .companyName(request.getName().trim())
                 .sector(request.getSector().trim())
+                .dataSource("SAMPLE")
+                .lastUpdated(java.time.LocalDateTime.now())
                 .build();
         Stock savedStock = stockRepository.save(stock);
 
@@ -58,7 +60,7 @@ public class AdminService {
         List<StockPrice> prices = generatePrices(savedStock, request.getStartingPrice(), 60);
         stockPriceRepository.saveAll(prices);
 
-        return new StockDto(savedStock.getId(), savedStock.getSymbol(), savedStock.getCompanyName(), savedStock.getSector());
+        return new StockDto(savedStock.getId(), savedStock.getSymbol(), savedStock.getCompanyName(), savedStock.getSector(), savedStock.getDataSource(), savedStock.getLastUpdated());
     }
 
     @Transactional

@@ -28,6 +28,8 @@ public class AnalysisDto {
     private List<BigDecimal> sma20Series;
     private String signal; // "BUY", "SELL", or "HOLD"
     private String signalReason;
+    private String dataSource = "SAMPLE";
+    private java.time.LocalDateTime lastUpdated;
 
     public AnalysisDto() {
     }
@@ -78,6 +80,8 @@ public class AnalysisDto {
         private List<BigDecimal> sma20Series;
         private String signal;
         private String signalReason;
+        private String dataSource = "SAMPLE";
+        private java.time.LocalDateTime lastUpdated;
 
         public AnalysisDtoBuilder symbol(String symbol) {
             this.symbol = symbol;
@@ -159,11 +163,24 @@ public class AnalysisDto {
             return this;
         }
 
+        public AnalysisDtoBuilder dataSource(String dataSource) {
+            this.dataSource = dataSource;
+            return this;
+        }
+
+        public AnalysisDtoBuilder lastUpdated(java.time.LocalDateTime lastUpdated) {
+            this.lastUpdated = lastUpdated;
+            return this;
+        }
+
         public AnalysisDto build() {
-            return new AnalysisDto(symbol, companyName, latestClosePrice, percentageChange,
+            AnalysisDto dto = new AnalysisDto(symbol, companyName, latestClosePrice, percentageChange,
                     movingAverage5Day, movingAverage20Day, highestPrice, lowestPrice,
                     rsi14, volatility, dates, closePrices, sma5Series, sma20Series,
                     signal, signalReason);
+            if (this.dataSource != null) dto.setDataSource(this.dataSource);
+            dto.setLastUpdated(this.lastUpdated);
+            return dto;
         }
     }
 
@@ -293,5 +310,21 @@ public class AnalysisDto {
 
     public void setSignalReason(String signalReason) {
         this.signalReason = signalReason;
+    }
+
+    public String getDataSource() {
+        return dataSource != null ? dataSource : "SAMPLE";
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public java.time.LocalDateTime getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public void setLastUpdated(java.time.LocalDateTime lastUpdated) {
+        this.lastUpdated = lastUpdated;
     }
 }

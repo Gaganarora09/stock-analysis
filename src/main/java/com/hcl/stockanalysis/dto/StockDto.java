@@ -12,6 +12,8 @@ public class StockDto {
     private String symbol;
     private String companyName;
     private String sector;
+    private String dataSource = "SAMPLE";
+    private java.time.LocalDateTime lastUpdated;
 
     public StockDto() {
     }
@@ -21,6 +23,16 @@ public class StockDto {
         this.symbol = symbol;
         this.companyName = companyName;
         this.sector = sector;
+        this.dataSource = "SAMPLE";
+    }
+
+    public StockDto(Long id, String symbol, String companyName, String sector, String dataSource, java.time.LocalDateTime lastUpdated) {
+        this.id = id;
+        this.symbol = symbol;
+        this.companyName = companyName;
+        this.sector = sector;
+        this.dataSource = (dataSource != null) ? dataSource : "SAMPLE";
+        this.lastUpdated = lastUpdated;
     }
 
     public Long getId() {
@@ -53,5 +65,21 @@ public class StockDto {
 
     public void setSector(String sector) {
         this.sector = sector;
+    }
+
+    public String getDataSource() {
+        return dataSource != null ? dataSource : "SAMPLE";
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public java.time.LocalDateTime getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public void setLastUpdated(java.time.LocalDateTime lastUpdated) {
+        this.lastUpdated = lastUpdated;
     }
 }

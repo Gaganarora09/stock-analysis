@@ -241,3 +241,22 @@ function getSignalBadge(signal) {
   if (s === 'SELL') cls = 'badge-sell';
   return `<span class="badge ${cls}">${s}</span>`;
 }
+
+function getDataSourceBadge(source) {
+  const isLive = source === 'LIVE';
+  const cls = isLive ? 'badge-live' : 'badge-sample';
+  const label = isLive ? '● Live Market Data' : 'Sample Data';
+  return `<span class="badge ${cls}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem; text-transform: uppercase;">${label}</span>`;
+}
+
+function formatLastUpdated(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) + 
+           ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return dateStr;
+  }
+}

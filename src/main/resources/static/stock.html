@@ -34,12 +34,14 @@
           <h1 style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 0;">
             <span id="symbolDisplay">---</span>
             <span id="signalBadgeContainer"></span>
+            <span id="dataSourceBadgeContainer"></span>
           </h1>
           <button id="watchlistBtn" class="btn btn-outline btn-sm" onclick="toggleWatchlistOnStockPage()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
             ☆ Add to Watchlist
           </button>
         </div>
         <p id="companyNameDisplay">Loading company metadata...</p>
+        <p id="lastUpdatedDisplay" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;"></p>
       </div>
 
       <div style="text-align: right;">
@@ -237,6 +239,12 @@
       chgEl.textContent = (isUp ? '▲ ' : '▼ ') + formatPercent(a.percentageChange);
 
       document.getElementById('signalBadgeContainer').innerHTML = getSignalBadge(a.signal);
+      const dsEl = document.getElementById('dataSourceBadgeContainer');
+      if (dsEl) dsEl.innerHTML = getDataSourceBadge(a.dataSource);
+      const updatedEl = document.getElementById('lastUpdatedDisplay');
+      if (updatedEl) {
+        updatedEl.textContent = a.lastUpdated ? `Last updated: ${formatLastUpdated(a.lastUpdated)}` : '';
+      }
       document.getElementById('panelBadge').innerHTML = getSignalBadge(a.signal);
       document.getElementById('panelReason').textContent = a.signalReason;
 

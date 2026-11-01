@@ -33,6 +33,25 @@
       <p style="color: var(--text-secondary); font-size: 0.9rem;">Provision new equities with automated 60-day price feeds, delete assets, and inspect platform users.</p>
     </div>
 
+    <!-- Market Data Sync Card -->
+    <div class="stat-box" style="margin-bottom: 2.5rem; padding: 1.5rem; border-left: 4px solid var(--accent);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">
+            📡 Market Data Synchronization
+          </h2>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; max-width: 680px;">
+            Trigger an on-demand refresh of daily closing prices from Alpha Vantage. The system updates existing dates, inserts newly closed sessions, halts on rate limits (25 requests/day on free tier), and safely keeps existing data if the API is unavailable.
+          </p>
+        </div>
+        <button id="refreshMarketBtn" onclick="triggerMarketRefresh()" class="btn btn-primary btn-sm" style="padding: 0.6rem 1.25rem; white-space: nowrap;">
+          🔄 Refresh Market Data
+        </button>
+      </div>
+
+      <div id="marketSyncAlert" class="alert" style="display: none; margin-top: 1.25rem;"></div>
+    </div>
+
     <!-- Add Stock Form Card -->
     <div class="stat-box" style="margin-bottom: 2.5rem; padding: 1.5rem;">
       <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">
@@ -89,12 +108,14 @@
               <th>Symbol</th>
               <th>Company Name</th>
               <th>Sector</th>
+              <th>Source</th>
+              <th>Last Updated</th>
               <th style="text-align: right;">Action</th>
             </tr>
           </thead>
           <tbody id="stocksTableBody">
             <tr>
-              <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading equities...</td>
+              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading equities...</td>
             </tr>
           </tbody>
         </table>
@@ -143,7 +164,7 @@
         document.getElementById('stockCount').textContent = stocks.length;
 
         if (stocks.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">No equities registered.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No equities registered.</td></tr>';
           return;
         }
 
@@ -152,6 +173,8 @@
             <td style="font-weight: 700; color: var(--accent);">${s.symbol}</td>
             <td>${s.companyName}</td>
             <td><span style="font-size: 0.85rem; color: var(--text-secondary);">${s.sector || 'General'}</span></td>
+            <td>${getDataSourceBadge(s.dataSource)}</td>
+            <td style="font-size: 0.8rem; color: var(--text-secondary);">${s.lastUpdated ? formatLastUpdated(s.lastUpdated) : 'Never'}</td>
             <td style="text-align: right;">
               <button onclick="deleteStock('${s.symbol}')" class="btn btn-danger btn-sm" style="padding: 0.25rem 0.6rem;">
                 Delete Asset
@@ -160,7 +183,39 @@
           </tr>
         `).join('');
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--danger); padding: 2rem;">${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 2rem;">${err.message}</td></tr>`;
+      }
+    }
+
+    async function triggerMarketRefresh() {
+      const btn = document.getElementById('refreshMarketBtn');
+      const alertBox = document.getElementById('marketSyncAlert');
+      alertBox.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = '⏳ Refreshing Data...';
+
+      try {
+        const res = await fetchWithAuth('/api/admin/market/refresh', {
+          method: 'POST'
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          alertBox.className = 'alert alert-success';
+          alertBox.innerHTML = `<strong>Sync Completed:</strong> ${data.message || ''} <span style="font-size: 0.8rem; margin-left: 0.5rem;">(Updated: ${data.updated}, Skipped: ${data.skipped}, Failed: ${data.failed})</span>`;
+          alertBox.style.display = 'block';
+          loadStocks();
+        } else {
+          alertBox.className = 'alert alert-danger';
+          alertBox.textContent = data.message || `Failed to refresh market data (${res.status})`;
+          alertBox.style.display = 'block';
+        }
+      } catch (err) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Network or server error while refreshing market data.';
+        alertBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Refresh Market Data';
       }
     }
 

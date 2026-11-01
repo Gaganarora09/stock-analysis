@@ -131,6 +131,8 @@
             symbol: s.symbol,
             companyName: s.companyName,
             sector: s.sector,
+            dataSource: a.dataSource || s.dataSource || 'SAMPLE',
+            lastUpdated: a.lastUpdated || s.lastUpdated || null,
             latestClosePrice: a.latestClosePrice || 0,
             percentageChange: a.percentageChange || 0,
             signal: a.signal || 'HOLD',
@@ -250,9 +252,11 @@
               <span class="stock-change ${changeClass}">${changeIcon} ${formatPercent(s.percentageChange)}</span>
             </div>
 
-            <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-              ${s.sector}
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              <span>${s.sector}</span>
+              ${getDataSourceBadge(s.dataSource)}
             </div>
+            ${s.lastUpdated ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1.25rem;">Updated: ${formatLastUpdated(s.lastUpdated)}</div>` : '<div style="margin-bottom: 0.5rem;"></div>'}
           </div>
 
           <a href="/stock.html?symbol=${s.symbol}" class="btn btn-outline btn-sm btn-block">

@@ -8,19 +8,19 @@ SELECT * FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM app_user u WHERE u.username = v.username);
 
 -- Stocks
-INSERT INTO stock (id, symbol, company_name, sector)
+INSERT INTO stock (id, symbol, company_name, sector, data_source)
 SELECT * FROM (VALUES
-(1, 'HCLTECH', 'HCL Technologies Ltd', 'Information Technology'),
-(2, 'TCS', 'Tata Consultancy Services Ltd', 'Information Technology'),
-(3, 'INFY', 'Infosys Ltd', 'Information Technology'),
-(4, 'WIPRO', 'Wipro Ltd', 'Information Technology'),
-(5, 'RELIANCE', 'Reliance Industries Ltd', 'Energy & Petrochemicals'),
-(6, 'HDFCBANK', 'HDFC Bank Ltd', 'Banking & Financial Services'),
-(7, 'ICICIBANK', 'ICICI Bank Ltd', 'Banking & Financial Services'),
-(8, 'SBIN', 'State Bank of India', 'Banking & Financial Services'),
-(9, 'ITC', 'ITC Ltd', 'Consumer Goods'),
-(10, 'TECHM', 'Tech Mahindra Ltd', 'Information Technology')
-) AS v(id, symbol, company_name, sector)
+(1, 'HCLTECH', 'HCL Technologies Ltd', 'Information Technology', 'SAMPLE'),
+(2, 'TCS', 'Tata Consultancy Services Ltd', 'Information Technology', 'SAMPLE'),
+(3, 'INFY', 'Infosys Ltd', 'Information Technology', 'SAMPLE'),
+(4, 'WIPRO', 'Wipro Ltd', 'Information Technology', 'SAMPLE'),
+(5, 'RELIANCE', 'Reliance Industries Ltd', 'Energy & Petrochemicals', 'SAMPLE'),
+(6, 'HDFCBANK', 'HDFC Bank Ltd', 'Banking & Financial Services', 'SAMPLE'),
+(7, 'ICICIBANK', 'ICICI Bank Ltd', 'Banking & Financial Services', 'SAMPLE'),
+(8, 'SBIN', 'State Bank of India', 'Banking & Financial Services', 'SAMPLE'),
+(9, 'ITC', 'ITC Ltd', 'Consumer Goods', 'SAMPLE'),
+(10, 'TECHM', 'Tech Mahindra Ltd', 'Information Technology', 'SAMPLE')
+) AS v(id, symbol, company_name, sector, data_source)
 WHERE NOT EXISTS (SELECT 1 FROM stock s WHERE s.symbol = v.symbol);
 
 -- Historical Prices (60 days per stock)

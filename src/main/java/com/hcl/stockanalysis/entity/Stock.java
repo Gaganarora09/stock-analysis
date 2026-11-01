@@ -25,6 +25,13 @@ public class Stock {
 
     private String sector;
 
+    @Column
+    private String dataSource = "SAMPLE";
+
+    private java.time.LocalDateTime lastUpdated;
+
+    private String marketSymbol;
+
     @OneToMany(mappedBy = "stock", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
@@ -50,6 +57,9 @@ public class Stock {
         private String symbol;
         private String companyName;
         private String sector;
+        private String dataSource = "SAMPLE";
+        private java.time.LocalDateTime lastUpdated;
+        private String marketSymbol;
         private List<StockPrice> prices = new ArrayList<>();
 
         public StockBuilder id(Long id) {
@@ -72,13 +82,32 @@ public class Stock {
             return this;
         }
 
+        public StockBuilder dataSource(String dataSource) {
+            this.dataSource = dataSource;
+            return this;
+        }
+
+        public StockBuilder lastUpdated(java.time.LocalDateTime lastUpdated) {
+            this.lastUpdated = lastUpdated;
+            return this;
+        }
+
+        public StockBuilder marketSymbol(String marketSymbol) {
+            this.marketSymbol = marketSymbol;
+            return this;
+        }
+
         public StockBuilder prices(List<StockPrice> prices) {
             this.prices = prices;
             return this;
         }
 
         public Stock build() {
-            return new Stock(id, symbol, companyName, sector, prices);
+            Stock s = new Stock(id, symbol, companyName, sector, prices);
+            if (this.dataSource != null) s.setDataSource(this.dataSource);
+            s.setLastUpdated(this.lastUpdated);
+            s.setMarketSymbol(this.marketSymbol);
+            return s;
         }
     }
 
@@ -120,5 +149,29 @@ public class Stock {
 
     public void setPrices(List<StockPrice> prices) {
         this.prices = prices;
+    }
+
+    public String getDataSource() {
+        return dataSource != null ? dataSource : "SAMPLE";
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public java.time.LocalDateTime getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public void setLastUpdated(java.time.LocalDateTime lastUpdated) {
+        this.lastUpdated = lastUpdated;
+    }
+
+    public String getMarketSymbol() {
+        return marketSymbol;
+    }
+
+    public void setMarketSymbol(String marketSymbol) {
+        this.marketSymbol = marketSymbol;
     }
 }

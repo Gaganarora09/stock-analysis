@@ -48,7 +48,7 @@ public class StockService {
     }
 
     private StockDto toStockDto(Stock stock) {
-        return new StockDto(stock.getId(), stock.getSymbol(), stock.getCompanyName(), stock.getSector());
+        return new StockDto(stock.getId(), stock.getSymbol(), stock.getCompanyName(), stock.getSector(), stock.getDataSource(), stock.getLastUpdated());
     }
 
     private StockPriceDto toStockPriceDto(StockPrice sp) {
