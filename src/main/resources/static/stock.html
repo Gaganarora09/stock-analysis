@@ -20,6 +20,7 @@
     </a>
     <div class="nav-links">
       <a href="/dashboard.html" class="btn btn-outline btn-sm">&larr; Back to Dashboard</a>
+      <a href="/admin.html" id="adminNavLink" class="btn btn-outline btn-sm" style="display: none; border-color: var(--warning); color: var(--warning);">⚙️ Admin</a>
       <div class="nav-user">User: <span id="userNameDisplay">--</span></div>
       <button onclick="logout()" class="btn btn-danger btn-sm">Sign Out</button>
     </div>
@@ -154,6 +155,7 @@
 
   <script>
     document.getElementById('userNameDisplay').textContent = getUsername();
+    loadUserRole().then(() => updateAdminNav());
 
     const urlParams = new URLSearchParams(window.location.search);
     const symbol = (urlParams.get('symbol') || 'HCLTECH').toUpperCase();

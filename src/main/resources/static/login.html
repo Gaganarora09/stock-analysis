@@ -91,7 +91,19 @@
         });
 
         if (res.ok) {
-          saveCredentials(username, password);
+          try {
+            const meRes = await fetch('/api/auth/me', {
+              headers: { 'Authorization': 'Basic ' + credentials }
+            });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              saveCredentials(username, password, meData.role);
+            } else {
+              saveCredentials(username, password);
+            }
+          } catch (e) {
+            saveCredentials(username, password);
+          }
           window.location.replace('/dashboard.html');
         } else if (res.status === 401) {
           alertBox.textContent = 'Invalid username or password. Please try again.';

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console - StockAnalysis</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js"></script>
+  <script>
+    requireAuth();
+    if (!isAdmin()) {
+      window.location.replace('/dashboard.html');
+    }
+  </script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/dashboard.html" class="nav-brand">
+      <div class="brand-icon">📈</div>
+      <span>StockAnalysis <span style="font-size: 0.75rem; color: var(--warning); border: 1px solid var(--warning); padding: 0.1rem 0.4rem; border-radius: var(--radius-sm); margin-left: 0.4rem;">ADMIN</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="/dashboard.html" class="btn btn-outline btn-sm">&larr; Back to Dashboard</a>
+      <div class="nav-user">User: <span id="userNameDisplay">--</span></div>
+      <a href="/swagger-ui.html" class="btn btn-outline btn-sm" target="_blank">API Docs</a>
+      <button onclick="logout()" class="btn btn-danger btn-sm">Sign Out</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 1.75rem; font-weight: 700;">Admin Management Console</h1>
+      <p style="color: var(--text-secondary); font-size: 0.9rem;">Provision new equities with automated 60-day price feeds, delete assets, and inspect platform users.</p>
+    </div>
+
+    <!-- Add Stock Form Card -->
+    <div class="stat-box" style="margin-bottom: 2.5rem; padding: 1.5rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">
+        ➕ Add New Equity Asset
+      </h2>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+        Saving a new stock automatically synthesizes 60 days of continuous price data based on the starting price so indicators, signals, and charts work immediately.
+      </p>
+
+      <div id="stockFormAlert" class="alert" style="display: none; margin-bottom: 1rem;"></div>
+
+      <form id="createStockForm">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="stockSymbol">Ticker Symbol</label>
+            <input type="text" id="stockSymbol" class="form-control" placeholder="e.g. BEL" required style="text-transform: uppercase;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="stockName">Company Name</label>
+            <input type="text" id="stockName" class="form-control" placeholder="e.g. Bharat Electronics Ltd" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="stockSector">Sector</label>
+            <input type="text" id="stockSector" class="form-control" placeholder="e.g. Aerospace & Defense" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="startingPrice">Starting Close Price (₹)</label>
+            <input type="number" id="startingPrice" class="form-control" placeholder="e.g. 295.50" step="0.01" min="0.01" required>
+          </div>
+        </div>
+
+        <button type="submit" id="saveStockBtn" class="btn btn-primary btn-sm" style="padding: 0.6rem 1.25rem;">
+          Save Stock & Generate 60-Day Prices
+        </button>
+      </form>
+    </div>
+
+    <!-- Stocks Management Table -->
+    <div style="margin-bottom: 2.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 700;">Managed Equities (<span id="stockCount">0</span>)</h2>
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Deleting a stock purges prices & watchlist records</span>
+      </div>
+
+      <div id="stocksTableAlert" class="alert" style="display: none; margin-bottom: 1rem;"></div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="stocksTable">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Company Name</th>
+              <th>Sector</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="stocksTableBody">
+            <tr>
+              <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading equities...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Registered Users Table (Read-Only) -->
+    <div style="margin-bottom: 2.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 700;">Platform Accounts (<span id="userCount">0</span>)</h2>
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Read-only directory (password hashes never exposed)</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="usersTable">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr>
+              <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading user accounts...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>Educational purposes only, not financial advice</p>
+  </footer>
+
+  <script>
+    document.getElementById('userNameDisplay').textContent = `${getUsername()} (${getUserRole()})`;
+
+    async function loadStocks() {
+      const tbody = document.getElementById('stocksTableBody');
+      try {
+        const res = await fetchWithAuth('/api/stocks');
+        if (!res.ok) throw new Error('Failed to load stocks');
+        const stocks = await res.json();
+        document.getElementById('stockCount').textContent = stocks.length;
+
+        if (stocks.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">No equities registered.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = stocks.map(s => `
+          <tr>
+            <td style="font-weight: 700; color: var(--accent);">${s.symbol}</td>
+            <td>${s.companyName}</td>
+            <td><span style="font-size: 0.85rem; color: var(--text-secondary);">${s.sector || 'General'}</span></td>
+            <td style="text-align: right;">
+              <button onclick="deleteStock('${s.symbol}')" class="btn btn-danger btn-sm" style="padding: 0.25rem 0.6rem;">
+                Delete Asset
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--danger); padding: 2rem;">${err.message}</td></tr>`;
+      }
+    }
+
+    async function deleteStock(symbol) {
+      if (!confirm(`Are you sure you want to delete ${symbol}?\n\nThis will permanently delete the stock, its 60 days of historical prices, and any user watchlist entries referencing it.`)) {
+        return;
+      }
+
+      const alertBox = document.getElementById('stocksTableAlert');
+      alertBox.style.display = 'none';
+
+      try {
+        const res = await fetchWithAuth(`/api/admin/stocks/${symbol}`, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          alertBox.className = 'alert alert-success';
+          alertBox.textContent = `Stock ${symbol} and all associated price/watchlist rows were deleted successfully.`;
+          alertBox.style.display = 'block';
+          loadStocks();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          alertBox.className = 'alert alert-danger';
+          alertBox.textContent = data.message || `Failed to delete stock (${res.status})`;
+          alertBox.style.display = 'block';
+        }
+      } catch (err) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Network or server error while deleting stock.';
+        alertBox.style.display = 'block';
+      }
+    }
+
+    async function loadUsers() {
+      const tbody = document.getElementById('usersTableBody');
+      try {
+        const res = await fetchWithAuth('/api/admin/users');
+        if (!res.ok) throw new Error('Failed to load users');
+        const users = await res.json();
+        document.getElementById('userCount').textContent = users.length;
+
+        tbody.innerHTML = users.map(u => {
+          const isAdminRole = u.role === 'ROLE_ADMIN' || u.role === 'ADMIN';
+          const badgeStyle = isAdminRole 
+            ? 'background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning);' 
+            : 'background: rgba(59, 130, 246, 0.15); color: var(--accent); border: 1px solid var(--accent);';
+          return `
+            <tr>
+              <td style="font-weight: 600;">${u.username}</td>
+              <td style="color: var(--text-secondary);">${u.email || '--'}</td>
+              <td>
+                <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; ${badgeStyle}">
+                  ${u.role}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--danger); padding: 2rem;">${err.message}</td></tr>`;
+      }
+    }
+
+    // Add Stock Form Submission
+    document.getElementById('createStockForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById('stockFormAlert');
+      const submitBtn = document.getElementById('saveStockBtn');
+      alertBox.style.display = 'none';
+
+      const symbol = document.getElementById('stockSymbol').value.trim().toUpperCase();
+      const name = document.getElementById('stockName').value.trim();
+      const sector = document.getElementById('stockSector').value.trim();
+      const startingPrice = parseFloat(document.getElementById('startingPrice').value);
+
+      if (!symbol || !name || !sector || isNaN(startingPrice) || startingPrice <= 0) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Please fill out all fields with valid values (starting price must be > 0).';
+        alertBox.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Generating 60-day price history...';
+
+      try {
+        const res = await fetchWithAuth('/api/admin/stocks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, name, sector, startingPrice })
+        });
+
+        if (res.ok || res.status === 201) {
+          alertBox.className = 'alert alert-success';
+          alertBox.textContent = `Stock ${symbol} created successfully with 60 days of historical prices!`;
+          alertBox.style.display = 'block';
+          document.getElementById('createStockForm').reset();
+          loadStocks();
+        } else if (res.status === 409) {
+          alertBox.className = 'alert alert-danger';
+          alertBox.textContent = `A stock with symbol "${symbol}" already exists.`;
+          alertBox.style.display = 'block';
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alertBox.className = 'alert alert-danger';
+          alertBox.textContent = errData.message || `Failed to create stock (${res.status})`;
+          alertBox.style.display = 'block';
+        }
+      } catch (err) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Network or server error while creating stock.';
+        alertBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Stock & Generate 60-Day Prices';
+      }
+    });
+
+    loadStocks();
+    loadUsers();
+  </script>
+</body>
+</html>

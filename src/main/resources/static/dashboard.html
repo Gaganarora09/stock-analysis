@@ -18,6 +18,7 @@
     </a>
     <div class="nav-links">
       <div class="nav-user">User: <span id="userNameDisplay">--</span></div>
+      <a href="/admin.html" id="adminNavLink" class="btn btn-outline btn-sm" style="display: none; border-color: var(--warning); color: var(--warning);">⚙️ Admin</a>
       <a href="/swagger-ui.html" class="btn btn-outline btn-sm" target="_blank">API Docs</a>
       <button onclick="logout()" class="btn btn-danger btn-sm">Sign Out</button>
     </div>
@@ -99,6 +100,7 @@
 
   <script>
     document.getElementById('userNameDisplay').textContent = getUsername();
+    loadUserRole().then(() => updateAdminNav());
 
     let allStocksData = [];
     let currentSignalFilter = 'ALL';

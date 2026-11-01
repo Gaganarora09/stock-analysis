@@ -11,6 +11,8 @@ public interface StockPriceRepository extends JpaRepository<StockPrice, Long> {
 
     List<StockPrice> findByStockSymbolOrderByPriceDateDesc(String symbol);
 
+    void deleteByStock(com.hcl.stockanalysis.entity.Stock stock);
+
     @Query("SELECT sp FROM StockPrice sp WHERE sp.stock.symbol = :symbol ORDER BY sp.priceDate DESC")
     List<StockPrice> findLatestPricesBySymbol(@Param("symbol") String symbol);
 

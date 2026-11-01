@@ -33,6 +33,7 @@ A full-stack Spring Boot 3 web application providing automated technical indicat
   - Side-by-side stock comparison overlaying a secondary ticker onto a distinct right-hand Y-axis.
 - **User Authentication**: Secure BCrypt-hashed password storage, HTTP Basic authentication with popup-suppressed 401 handling, and session persistence.
 - **Per-User Watchlist**: Personalized stock watchlists per user, with one-click star toggle on the dashboard, dedicated "My Watchlist" filter tab, and header controls on the analytics page.
+- **Admin Management Console (`admin.html`)**: Dedicated console for `ROLE_ADMIN` users to provision new equities with automated 60-day historical price synthesis, delete assets with full cascade purging, and review registered platform accounts.
 - **Dual Database Architecture**: Zero-setup embedded H2 database for local development and PostgreSQL-ready configuration for cloud deployments.
 
 ---
@@ -276,6 +277,58 @@ All `/api/stocks/**` endpoints require HTTP Basic authentication (`username:pass
 
 ---
 
+### 4. Admin Endpoints (ROLE_ADMIN Only)
+
+All endpoints under `/api/admin/**` require authentication with the `ROLE_ADMIN` authority. Requests from unauthenticated clients return `401 Unauthorized`, and requests from non-admin authenticated users (`ROLE_USER`) return `403 Forbidden`.
+
+#### Create Stock with 60-Day Price Synthesis
+- **URL**: `POST /api/admin/stocks`
+- **Request Body**:
+  ```json
+  {
+    "symbol": "BEL",
+    "name": "Bharat Electronics Ltd",
+    "sector": "Aerospace & Defense",
+    "startingPrice": 290.00
+  }
+  ```
+- **Description**: Validates that the symbol is unique (rejects duplicates with `409 Conflict`), creates the stock, and automatically synthesizes 60 days of realistic daily closing prices (random walk) so that moving averages, RSI, signals, and charts work immediately.
+- **Response** (`201 Created`):
+  ```json
+  {
+    "id": 100,
+    "symbol": "BEL",
+    "companyName": "Bharat Electronics Ltd",
+    "sector": "Aerospace & Defense"
+  }
+  ```
+
+#### Delete Stock & Cascade Purge
+- **URL**: `DELETE /api/admin/stocks/{symbol}`
+- **Description**: Deletes the specified stock along with its historical prices and all referencing watchlist records in a single transactional operation, preventing foreign key constraint violations and orphan records on both H2 and PostgreSQL. Returns `404 Not Found` if the symbol does not exist.
+- **Response** (`204 No Content`)
+
+#### Get Platform Users (Read-Only)
+- **URL**: `GET /api/admin/users`
+- **Description**: Returns all registered platform users with their username, email, and role. Password hashes are strictly omitted.
+- **Response** (`200 OK`):
+  ```json
+  [
+    {
+      "username": "admin",
+      "role": "ROLE_ADMIN",
+      "email": "admin@hcl.com"
+    },
+    {
+      "username": "alice",
+      "role": "ROLE_USER",
+      "email": "alice@hcl.com"
+    }
+  ]
+  ```
+
+---
+
 ## Testing
 
 The project includes an automated test suite combining unit tests with Mockito and full-context integration tests with Spring Boot Test and MockMvc. All tests execute against an isolated in-memory H2 database (`application-test.properties`), ensuring determinism without impacting local or production databases.
@@ -286,7 +339,7 @@ The project includes an automated test suite combining unit tests with Mockito a
 mvn clean test
 ```
 
-### Coverage Overview (24 Automated Tests)
+### Coverage Overview (31 Automated Tests)
 
 1. **`AnalysisServiceTest` (6 unit tests)**:
    - Technical indicators: SMA5, SMA20, RSI(14), daily % change, historical high/low, and volatility.
@@ -300,11 +353,15 @@ mvn clean test
    - Watchlist additions and idempotent duplicate requests (no duplicate entries saved).
    - Watchlist deletions and unknown stock symbol handling.
    - User isolation: ensures each user only accesses their own watchlist items.
-4. **`AuthAndSecurityIT` (6 integration tests)**:
+4. **`AuthAndSecurityIT` (13 integration tests)**:
    - Security boundaries: `/api/stocks` and `/api/watchlist` require authentication (return 401 unauthenticated).
    - HTTP Basic auth: valid credentials (`admin:admin123`) return 200 OK.
    - Public web resources: `/login.html` is accessible without authentication (returns 200 OK).
    - Form validation: valid registration succeeds (201 Created); invalid payloads return 400 Bad Request with field errors.
+   - Role boundaries: `admin` gets 200 OK and `alice` gets 403 Forbidden on `/api/admin/users`; unauthenticated requests get 401.
+   - Registration role lock: registrations always assign `ROLE_USER` and cannot create admin accounts.
+   - Admin stock management: `POST /api/admin/stocks` creates stock and 60 daily prices; duplicate symbols rejected with 409 Conflict.
+   - Cascade deletion: `DELETE /api/admin/stocks/{symbol}` cleanly purges stock, its prices, and watchlist records without orphan rows.
 
 ---
 

@@ -684,3 +684,6 @@ SELECT * FROM (VALUES
 ) AS v(stock_id, price_date, open_price, close_price, high_price, low_price, volume)
 WHERE NOT EXISTS (SELECT 1 FROM stock_price sp WHERE sp.stock_id = v.stock_id AND sp.price_date = v.price_date);
 
+
+-- Reset sequence for newly created stocks
+ALTER TABLE stock ALTER COLUMN id RESTART WITH 100;

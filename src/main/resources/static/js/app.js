@@ -1,9 +1,46 @@
 // Shared Application and Technical Analysis Utilities
 
-function saveCredentials(username, password) {
+function saveCredentials(username, password, role) {
   sessionStorage.setItem('stock_username', username);
   sessionStorage.setItem('stock_password', password);
   sessionStorage.setItem('stock_auth', btoa(username + ':' + password));
+  if (role) {
+    sessionStorage.setItem('stock_role', role);
+  }
+}
+
+function getUserRole() {
+  return sessionStorage.getItem('stock_role') || '';
+}
+
+function isAdmin() {
+  const role = getUserRole();
+  return role === 'ROLE_ADMIN' || role === 'ADMIN';
+}
+
+async function loadUserRole() {
+  let role = getUserRole();
+  if (role) return role;
+  try {
+    const res = await fetchWithAuth('/api/auth/me');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.role) {
+        sessionStorage.setItem('stock_role', data.role);
+        return data.role;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load user role:', err);
+  }
+  return '';
+}
+
+function updateAdminNav() {
+  const adminLink = document.getElementById('adminNavLink');
+  if (adminLink) {
+    adminLink.style.display = isAdmin() ? 'inline-block' : 'none';
+  }
 }
 
 function getCredentials() {
@@ -36,6 +73,7 @@ function logout() {
   sessionStorage.removeItem('stock_username');
   sessionStorage.removeItem('stock_password');
   sessionStorage.removeItem('stock_auth');
+  sessionStorage.removeItem('stock_role');
   sessionStorage.removeItem('stock_user');
   window.location.href = '/login.html';
 }

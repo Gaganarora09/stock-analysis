@@ -13,4 +13,5 @@ public interface WatchlistRepository extends JpaRepository<Watchlist, Long> {
     Optional<Watchlist> findByUserAndStock(User user, Stock stock);
     boolean existsByUserAndStock(User user, Stock stock);
     void deleteByUserAndStock(User user, Stock stock);
+    void deleteByStock(Stock stock);
 }
