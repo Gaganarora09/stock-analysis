@@ -276,6 +276,38 @@ All `/api/stocks/**` endpoints require HTTP Basic authentication (`username:pass
 
 ---
 
+## Testing
+
+The project includes an automated test suite combining unit tests with Mockito and full-context integration tests with Spring Boot Test and MockMvc. All tests execute against an isolated in-memory H2 database (`application-test.properties`), ensuring determinism without impacting local or production databases.
+
+### Running Tests
+
+```bash
+mvn clean test
+```
+
+### Coverage Overview (24 Automated Tests)
+
+1. **`AnalysisServiceTest` (6 unit tests)**:
+   - Technical indicators: SMA5, SMA20, RSI(14), daily % change, historical high/low, and volatility.
+   - Signal scoring logic: verified across uptrend (BUY), downtrend (SELL), flat price series, and small datasets (< 20 records yielding HOLD).
+   - Exception handling: missing stock symbols and empty price histories throw `ResourceNotFoundException`.
+2. **`UserServiceTest` (6 unit tests)**:
+   - Password encryption: verifies BCrypt hashing before persistence, ensuring plain text is never stored.
+   - Duplicate registration prevention: duplicate usernames or emails throw `UserAlreadyExistsException`.
+   - Authentication verification: valid logins return `AuthResponse`; invalid passwords or unknown users throw `BadCredentialsException`.
+3. **`WatchlistServiceTest` (6 unit tests)**:
+   - Watchlist additions and idempotent duplicate requests (no duplicate entries saved).
+   - Watchlist deletions and unknown stock symbol handling.
+   - User isolation: ensures each user only accesses their own watchlist items.
+4. **`AuthAndSecurityIT` (6 integration tests)**:
+   - Security boundaries: `/api/stocks` and `/api/watchlist` require authentication (return 401 unauthenticated).
+   - HTTP Basic auth: valid credentials (`admin:admin123`) return 200 OK.
+   - Public web resources: `/login.html` is accessible without authentication (returns 200 OK).
+   - Form validation: valid registration succeeds (201 Created); invalid payloads return 400 Bad Request with field errors.
+
+---
+
 ## Deployment Steps
 
 ### 1. Containerized Deployment with Docker
