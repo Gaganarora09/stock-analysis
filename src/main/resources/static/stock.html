@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stock Analytics & Forecast - StockAnalysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/app.js"></script>
   <!-- Chart.js 4.4.1 CDN as specified -->
@@ -20,7 +23,7 @@
     </a>
     <div class="nav-links">
       <a href="/dashboard.html" class="btn btn-outline btn-sm">&larr; Back to Dashboard</a>
-      <a href="/admin.html" id="adminNavLink" class="btn btn-outline btn-sm" style="display: none; border-color: var(--warning); color: var(--warning);">⚙️ Admin</a>
+      <a href="/admin.html" id="adminNavLink" class="btn btn-outline btn-sm" style="display: none;">⚙️ Admin</a>
       <div class="nav-user">User: <span id="userNameDisplay">--</span></div>
       <button onclick="logout()" class="btn btn-danger btn-sm">Sign Out</button>
     </div>
@@ -56,10 +59,10 @@
       <!-- Side Panel: Signal, Reason, High, Low, Volatility, % Change -->
       <aside style="display: flex; flex-direction: column; gap: 1rem;">
         <!-- Technical Strategy Card -->
-        <div class="stat-box" style="border-left: 4px solid var(--accent); padding: 1.25rem;">
+        <div class="stat-box" style="border-left: 3px solid var(--accent); padding: 1.25rem;">
           <div class="stat-label">System Recommendation</div>
           <div style="margin: 0.5rem 0;" id="panelBadge">--</div>
-          <div style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;" id="panelReason">
+          <div style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.4;" id="panelReason">
             Calculating signal...
           </div>
         </div>
@@ -76,11 +79,11 @@
         <div class="stat-box">
           <div class="stat-label">Moving Averages</div>
           <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-            <span style="color: #f59e0b;">5-Day SMA</span>
+            <span style="color: var(--accent);">5-Day SMA</span>
             <strong id="panelSma5">--</strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 0.35rem;">
-            <span style="color: #a855f7;">20-Day SMA</span>
+            <span style="color: var(--hold);">20-Day SMA</span>
             <strong id="panelSma20">--</strong>
           </div>
         </div>
@@ -88,12 +91,12 @@
         <div class="stat-box">
           <div class="stat-label">Historical Extremes (60-Day)</div>
           <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-            <span style="color: var(--success);">Highest</span>
-            <strong id="panelHigh" style="color: var(--success);">--</strong>
+            <span style="color: var(--buy);">Highest</span>
+            <strong id="panelHigh" style="color: var(--buy);">--</strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 0.35rem;">
-            <span style="color: var(--danger);">Lowest</span>
-            <strong id="panelLow" style="color: var(--danger);">--</strong>
+            <span style="color: var(--sell);">Lowest</span>
+            <strong id="panelLow" style="color: var(--sell);">--</strong>
           </div>
         </div>
 
@@ -259,7 +262,7 @@
 
       const forecastEl = document.getElementById('panelForecastTrend');
       forecastEl.textContent = `Trend: ${p.trend}`;
-      forecastEl.style.color = p.trend === 'UP' ? 'var(--success)' : 'var(--danger)';
+      forecastEl.style.color = p.trend === 'UP' ? 'var(--buy)' : 'var(--sell)';
       document.getElementById('panelForecastDetails').textContent = 
         `Target 7-Day: ${formatCurrency(p.predictedFinalPrice)} (${formatPercent(p.predictedChangePercent)})`;
     }
@@ -300,7 +303,7 @@
         const compDataset = {
           label: `${compSym} Close (Secondary Axis)`,
           data: compPricesAligned,
-          borderColor: '#ec4899',
+          borderColor: '#7C8CA3',
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.15,
@@ -318,7 +321,7 @@
           display: true,
           position: 'right',
           grid: { drawOnChartArea: false },
-          ticks: { color: '#ec4899' }
+          ticks: { color: '#7C8CA3' }
         };
 
         priceChart.update();
@@ -357,17 +360,16 @@
             {
               label: `${a.symbol} Close`,
               data: histCloses,
-              borderColor: '#388bfd',
-              backgroundColor: 'rgba(56, 139, 253, 0.08)',
+              borderColor: '#1E293B',
               borderWidth: 2,
-              fill: true,
+              fill: false,
               pointRadius: 0,
               tension: 0.15
             },
             {
               label: 'SMA (5)',
               data: sma5,
-              borderColor: '#f59e0b',
+              borderColor: '#2563EB',
               borderWidth: 1.6,
               pointRadius: 0,
               tension: 0.2
@@ -375,7 +377,7 @@
             {
               label: 'SMA (20)',
               data: sma20,
-              borderColor: '#a855f7',
+              borderColor: '#D97706',
               borderWidth: 1.6,
               pointRadius: 0,
               tension: 0.2
@@ -383,11 +385,11 @@
             {
               label: '7-Day Prediction (Linear)',
               data: predCloses,
-              borderColor: '#10b981',
+              borderColor: '#16A34A',
               borderWidth: 2.2,
               borderDash: [6, 4],
               pointRadius: 3,
-              pointBackgroundColor: '#10b981',
+              pointBackgroundColor: '#16A34A',
               tension: 0.05
             }
           ]
@@ -397,7 +399,7 @@
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: { labels: { color: '#94a3b8' } },
+            legend: { labels: { color: '#64748B' } },
             tooltip: {
               callbacks: {
                 label: function(ctx) {
@@ -411,13 +413,13 @@
           },
           scales: {
             x: {
-              grid: { color: '#1f2937' },
-              ticks: { color: '#64748b', maxTicksLimit: 12 }
+              grid: { color: '#E2E8F0' },
+              ticks: { color: '#64748B', maxTicksLimit: 12 }
             },
             y: {
-              grid: { color: '#1f2937' },
+              grid: { color: '#E2E8F0' },
               ticks: {
-                color: '#94a3b8',
+                color: '#64748B',
                 callback: function(v) { return '₹' + v; }
               }
             }
@@ -443,7 +445,7 @@
             {
               label: 'RSI (14)',
               data: rsiSeries,
-              borderColor: '#388bfd',
+              borderColor: '#2563EB',
               borderWidth: 2,
               pointRadius: 0,
               tension: 0.15
@@ -451,7 +453,7 @@
             {
               label: 'Overbought (70)',
               data: new Array(n).fill(70),
-              borderColor: 'rgba(239, 68, 68, 0.7)',
+              borderColor: 'rgba(220, 38, 38, 0.7)',
               borderWidth: 1.2,
               borderDash: [4, 4],
               pointRadius: 0
@@ -459,7 +461,7 @@
             {
               label: 'Oversold (30)',
               data: new Array(n).fill(30),
-              borderColor: 'rgba(16, 185, 129, 0.7)',
+              borderColor: 'rgba(22, 163, 74, 0.7)',
               borderWidth: 1.2,
               borderDash: [4, 4],
               pointRadius: 0
@@ -470,18 +472,18 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { labels: { color: '#94a3b8' } }
+            legend: { labels: { color: '#64748B' } }
           },
           scales: {
             x: {
-              grid: { color: '#1f2937' },
-              ticks: { color: '#64748b', maxTicksLimit: 12 }
+              grid: { color: '#E2E8F0' },
+              ticks: { color: '#64748B', maxTicksLimit: 12 }
             },
             y: {
               min: 0,
               max: 100,
-              grid: { color: '#1f2937' },
-              ticks: { color: '#94a3b8', stepSize: 20 }
+              grid: { color: '#E2E8F0' },
+              ticks: { color: '#64748B', stepSize: 20 }
             }
           }
         }

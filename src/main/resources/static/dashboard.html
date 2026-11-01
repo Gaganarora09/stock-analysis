@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - StockAnalysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/app.js"></script>
   <script>
@@ -18,7 +21,7 @@
     </a>
     <div class="nav-links">
       <div class="nav-user">User: <span id="userNameDisplay">--</span></div>
-      <a href="/admin.html" id="adminNavLink" class="btn btn-outline btn-sm" style="display: none; border-color: var(--warning); color: var(--warning);">⚙️ Admin</a>
+      <a href="/admin.html" id="adminNavLink" class="btn btn-outline btn-sm" style="display: none;">⚙️ Admin</a>
       <a href="/swagger-ui.html" class="btn btn-outline btn-sm" target="_blank">API Docs</a>
       <button onclick="logout()" class="btn btn-danger btn-sm">Sign Out</button>
     </div>
@@ -27,7 +30,7 @@
   <main class="container">
     <div style="margin-bottom: 1.5rem;">
       <h1 style="font-size: 1.75rem; font-weight: 700;">Equities Dashboard</h1>
-      <p style="color: var(--text-secondary); font-size: 0.9rem;">Real-time technical indicators, momentum scores & forecasts across 10 top Indian equities</p>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Real-time technical indicators, momentum scores & forecasts across 10 top Indian equities</p>
     </div>
 
     <!-- Summary Counts -->
@@ -40,26 +43,26 @@
         <div style="font-size: 2rem;">🏢</div>
       </div>
 
-      <div class="summary-card" style="border-left: 4px solid var(--success); cursor: pointer;" onclick="setSignalFilter('BUY')">
+      <div class="summary-card" style="border-left: 3px solid var(--buy); cursor: pointer;" onclick="setSignalFilter('BUY')">
         <div>
-          <div class="label" style="color: var(--success);">BUY Signals</div>
-          <div class="value" id="buyCount" style="color: var(--success);">--</div>
+          <div class="label" style="color: var(--buy);">BUY Signals</div>
+          <div class="value" id="buyCount" style="color: var(--buy);">--</div>
         </div>
         <div style="font-size: 2rem;">🟢</div>
       </div>
 
-      <div class="summary-card" style="border-left: 4px solid var(--warning); cursor: pointer;" onclick="setSignalFilter('HOLD')">
+      <div class="summary-card" style="border-left: 3px solid var(--hold); cursor: pointer;" onclick="setSignalFilter('HOLD')">
         <div>
-          <div class="label" style="color: var(--warning);">HOLD Signals</div>
-          <div class="value" id="holdCount" style="color: var(--warning);">--</div>
+          <div class="label" style="color: var(--hold);">HOLD Signals</div>
+          <div class="value" id="holdCount" style="color: var(--hold);">--</div>
         </div>
         <div style="font-size: 2rem;">🟡</div>
       </div>
 
-      <div class="summary-card" style="border-left: 4px solid var(--danger); cursor: pointer;" onclick="setSignalFilter('SELL')">
+      <div class="summary-card" style="border-left: 3px solid var(--sell); cursor: pointer;" onclick="setSignalFilter('SELL')">
         <div>
-          <div class="label" style="color: var(--danger);">SELL Signals</div>
-          <div class="value" id="sellCount" style="color: var(--danger);">--</div>
+          <div class="label" style="color: var(--sell);">SELL Signals</div>
+          <div class="value" id="sellCount" style="color: var(--sell);">--</div>
         </div>
         <div style="font-size: 2rem;">🔴</div>
       </div>
@@ -73,7 +76,7 @@
       </div>
 
       <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-        <span style="font-size: 0.85rem; color: var(--text-secondary);">Filter:</span>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">Filter:</span>
         <button class="btn btn-outline btn-sm filter-btn active" data-filter="ALL" onclick="setSignalFilter('ALL')">All</button>
         <button class="btn btn-outline btn-sm filter-btn" data-filter="WATCHLIST" onclick="setSignalFilter('WATCHLIST')">⭐ My Watchlist</button>
         <button class="btn btn-outline btn-sm filter-btn" data-filter="BUY" onclick="setSignalFilter('BUY')">BUY</button>
@@ -81,23 +84,23 @@
         <button class="btn btn-outline btn-sm filter-btn" data-filter="SELL" onclick="setSignalFilter('SELL')">SELL</button>
       </div>
 
-      <div style="color: var(--text-secondary); font-size: 0.85rem;" id="filterStatus">
+      <div style="color: var(--text-muted); font-size: 0.85rem;" id="filterStatus">
         Showing all stocks
       </div>
     </div>
 
     <!-- Loading / Stock Cards Grid -->
-    <div id="loadingIndicator" style="text-align: center; padding: 3.5rem 1rem; color: var(--text-secondary);">
-      <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem;"></div>
-      <div style="font-size: 1rem; font-weight: 500; color: var(--text-primary);">Loading market data & analytics...</div>
+    <div id="loadingIndicator" style="text-align: center; padding: 3.5rem 1rem; color: var(--text-muted);">
+      <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem;"></div>
+      <div style="font-size: 1rem; font-weight: 500; color: var(--text);">Loading market data & analytics...</div>
       <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">Fetching consolidated summary from server cache</div>
     </div>
 
     <!-- Error State with Retry Button -->
-    <div id="errorContainer" class="stat-box" style="display: none; text-align: center; padding: 2.5rem; margin: 2rem auto; max-width: 520px; border: 1px solid var(--danger);">
-      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">⚠️</div>
-      <h3 style="color: var(--danger); font-size: 1.15rem; margin-bottom: 0.5rem;">Failed to load market data</h3>
-      <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.25rem;" id="errorMessage">Unable to communicate with the server. Please check your network connection or session.</p>
+    <div id="errorContainer" class="alert alert-danger" style="display: none; text-align: center; padding: 2rem; margin: 2rem auto; max-width: 520px;">
+      <div style="font-size: 2.25rem; margin-bottom: 0.5rem;">⚠️</div>
+      <h3 style="color: var(--sell-text); font-size: 1.15rem; margin-bottom: 0.5rem; font-weight: 700;">Failed to load market data</h3>
+      <p style="color: var(--sell-text); font-size: 0.88rem; margin-bottom: 1.25rem;" id="errorMessage">Unable to communicate with the server. Please check your network connection or session.</p>
       <button onclick="loadDashboard()" class="btn btn-primary btn-sm" style="padding: 0.5rem 1.25rem;">
         🔄 Retry
       </button>
