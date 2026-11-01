@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/stocks/**").authenticated()
+                .requestMatchers("/api/watchlist/**").authenticated()
                 .anyRequest().authenticated()
             )
             .httpBasic(basic -> basic.authenticationEntryPoint((request, response, authException) ->

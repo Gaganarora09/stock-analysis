@@ -32,6 +32,7 @@ A full-stack Spring Boot 3 web application providing automated technical indicat
   - RSI(14) oscillator chart with 30 (oversold) and 70 (overbought) threshold bounds.
   - Side-by-side stock comparison overlaying a secondary ticker onto a distinct right-hand Y-axis.
 - **User Authentication**: Secure BCrypt-hashed password storage, HTTP Basic authentication with popup-suppressed 401 handling, and session persistence.
+- **Per-User Watchlist**: Personalized stock watchlists per user, with one-click star toggle on the dashboard, dedicated "My Watchlist" filter tab, and header controls on the analytics page.
 - **Dual Database Architecture**: Zero-setup embedded H2 database for local development and PostgreSQL-ready configuration for cloud deployments.
 
 ---
@@ -239,6 +240,39 @@ All `/api/stocks/**` endpoints require HTTP Basic authentication (`username:pass
     ]
   }
   ```
+
+---
+
+### 3. Watchlist Endpoints (Protected)
+
+#### Get Current User Watchlist
+- **URL**: `GET /api/watchlist`
+- **Description**: Returns all equities currently saved in the authenticated user's watchlist.
+- **Response** (`200 OK`):
+  ```json
+  [
+    {
+      "symbol": "HCLTECH",
+      "companyName": "HCL Technologies Ltd",
+      "sector": "Information Technology"
+    },
+    {
+      "symbol": "TCS",
+      "companyName": "Tata Consultancy Services Ltd",
+      "sector": "Information Technology"
+    }
+  ]
+  ```
+
+#### Add Stock to Watchlist
+- **URL**: `POST /api/watchlist/{symbol}`
+- **Description**: Adds the specified stock to the authenticated user's watchlist. Idempotent (succeeds with 200 OK if already present). Returns 404 if the symbol is not recognized.
+- **Response** (`200 OK`)
+
+#### Remove Stock from Watchlist
+- **URL**: `DELETE /api/watchlist/{symbol}`
+- **Description**: Removes the specified stock from the authenticated user's watchlist.
+- **Response** (`204 No Content`)
 
 ---
 

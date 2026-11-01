@@ -72,8 +72,9 @@
       </div>
 
       <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-        <span style="font-size: 0.85rem; color: var(--text-secondary);">Filter Signal:</span>
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Filter:</span>
         <button class="btn btn-outline btn-sm filter-btn active" data-filter="ALL" onclick="setSignalFilter('ALL')">All</button>
+        <button class="btn btn-outline btn-sm filter-btn" data-filter="WATCHLIST" onclick="setSignalFilter('WATCHLIST')">⭐ My Watchlist</button>
         <button class="btn btn-outline btn-sm filter-btn" data-filter="BUY" onclick="setSignalFilter('BUY')">BUY</button>
         <button class="btn btn-outline btn-sm filter-btn" data-filter="HOLD" onclick="setSignalFilter('HOLD')">HOLD</button>
         <button class="btn btn-outline btn-sm filter-btn" data-filter="SELL" onclick="setSignalFilter('SELL')">SELL</button>
@@ -101,11 +102,17 @@
 
     let allStocksData = [];
     let currentSignalFilter = 'ALL';
+    let watchlistSymbols = new Set();
 
     async function loadDashboard() {
       try {
-        const stocksRes = await fetchWithAuth('/api/stocks');
+        const [stocksRes, watchlistRes] = await Promise.all([
+          fetchWithAuth('/api/stocks'),
+          fetchWithAuth('/api/watchlist')
+        ]);
         const stocks = await stocksRes.json();
+        const watchlist = await watchlistRes.json();
+        watchlistSymbols = new Set((watchlist || []).map(item => item.symbol));
 
         // Fetch analysis for each stock in parallel
         const analysisPromises = stocks.map(s => 
@@ -166,12 +173,39 @@
         const matchesQuery = s.symbol.toLowerCase().includes(q) || 
                              s.companyName.toLowerCase().includes(q) ||
                              (s.sector && s.sector.toLowerCase().includes(q));
-        const matchesSignal = (currentSignalFilter === 'ALL') || (s.signal === currentSignalFilter);
+        const matchesSignal = (currentSignalFilter === 'ALL') ? true :
+                              (currentSignalFilter === 'WATCHLIST') ? watchlistSymbols.has(s.symbol) :
+                              (s.signal === currentSignalFilter);
         return matchesQuery && matchesSignal;
       });
 
       renderStockCards(filtered);
-      document.getElementById('filterStatus').textContent = `Showing ${filtered.length} of ${allStocksData.length} stocks`;
+      if (currentSignalFilter === 'WATCHLIST') {
+        document.getElementById('filterStatus').textContent = `Showing ${filtered.length} of ${allStocksData.length} stocks in your watchlist`;
+      } else {
+        document.getElementById('filterStatus').textContent = `Showing ${filtered.length} of ${allStocksData.length} stocks`;
+      }
+    }
+
+    async function toggleWatchlist(symbol, event) {
+      if (event) event.stopPropagation();
+      const inWatchlist = watchlistSymbols.has(symbol);
+      const method = inWatchlist ? 'DELETE' : 'POST';
+      try {
+        const res = await fetchWithAuth(`/api/watchlist/${symbol}`, { method: method });
+        if (res.ok) {
+          if (inWatchlist) {
+            watchlistSymbols.delete(symbol);
+          } else {
+            watchlistSymbols.add(symbol);
+          }
+          applyFilters();
+        } else {
+          console.error('Failed to update watchlist');
+        }
+      } catch (err) {
+        console.error('Error updating watchlist:', err);
+      }
     }
 
     function renderStockCards(stocks) {
@@ -179,7 +213,10 @@
       grid.innerHTML = '';
 
       if (stocks.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">No stocks matching filter criteria.</div>';
+        const emptyMsg = currentSignalFilter === 'WATCHLIST' 
+          ? 'Your watchlist is empty. Click the star on any stock card to add it.'
+          : 'No stocks matching filter criteria.';
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">${emptyMsg}</div>`;
         return;
       }
 
@@ -187,15 +224,21 @@
         const isUp = s.percentageChange >= 0;
         const changeClass = isUp ? 'change-up' : 'change-down';
         const changeIcon = isUp ? '▲' : '▼';
+        const inWatchlist = watchlistSymbols.has(s.symbol);
 
         const card = document.createElement('div');
         card.className = 'stock-card';
         card.innerHTML = `
           <div>
             <div class="stock-header">
-              <div>
-                <div class="stock-symbol">${s.symbol}</div>
-                <div class="stock-name" title="${s.companyName}">${s.companyName}</div>
+              <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                <button class="star-btn ${inWatchlist ? 'active' : ''}" onclick="toggleWatchlist('${s.symbol}', event)" title="${inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}">
+                  ${inWatchlist ? '★' : '☆'}
+                </button>
+                <div>
+                  <div class="stock-symbol">${s.symbol}</div>
+                  <div class="stock-name" title="${s.companyName}">${s.companyName}</div>
+                </div>
               </div>
               ${getSignalBadge(s.signal)}
             </div>

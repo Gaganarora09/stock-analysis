@@ -29,10 +29,15 @@
     <!-- Top Header -->
     <div class="detail-header">
       <div class="detail-title">
-        <h1>
-          <span id="symbolDisplay">---</span>
-          <span id="signalBadgeContainer"></span>
-        </h1>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <h1 style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 0;">
+            <span id="symbolDisplay">---</span>
+            <span id="signalBadgeContainer"></span>
+          </h1>
+          <button id="watchlistBtn" class="btn btn-outline btn-sm" onclick="toggleWatchlistOnStockPage()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            ☆ Add to Watchlist
+          </button>
+        </div>
         <p id="companyNameDisplay">Loading company metadata...</p>
       </div>
 
@@ -158,20 +163,25 @@
     let mainAnalysis = null;
     let mainPrediction = null;
     let allStocks = [];
+    let inWatchlist = false;
 
     async function initPage() {
       document.getElementById('symbolDisplay').textContent = symbol;
 
       try {
-        const [stocksRes, analysisRes, predRes] = await Promise.all([
+        const [stocksRes, analysisRes, predRes, watchlistRes] = await Promise.all([
           fetchWithAuth('/api/stocks'),
           fetchWithAuth(`/api/stocks/${symbol}/analysis`),
-          fetchWithAuth(`/api/stocks/${symbol}/prediction`)
+          fetchWithAuth(`/api/stocks/${symbol}/prediction`),
+          fetchWithAuth('/api/watchlist')
         ]);
 
         allStocks = await stocksRes.json();
         mainAnalysis = await analysisRes.json();
         mainPrediction = await predRes.json();
+        const watchlist = await watchlistRes.json();
+        inWatchlist = (watchlist || []).some(w => w.symbol === symbol);
+        updateWatchlistButton();
 
         populateCompareDropdown();
         renderSidePanel(mainAnalysis, mainPrediction);
@@ -181,6 +191,37 @@
       } catch (err) {
         console.error('Failed to load stock data:', err);
         alert('Could not load analysis for: ' + symbol);
+      }
+    }
+
+    function updateWatchlistButton() {
+      const btn = document.getElementById('watchlistBtn');
+      if (!btn) return;
+      if (inWatchlist) {
+        btn.innerHTML = '★ In Watchlist (Remove)';
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+        btn.title = 'Click to remove from your watchlist';
+      } else {
+        btn.innerHTML = '☆ Add to Watchlist';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline');
+        btn.title = 'Click to add to your watchlist';
+      }
+    }
+
+    async function toggleWatchlistOnStockPage() {
+      const method = inWatchlist ? 'DELETE' : 'POST';
+      try {
+        const res = await fetchWithAuth(`/api/watchlist/${symbol}`, { method: method });
+        if (res.ok) {
+          inWatchlist = !inWatchlist;
+          updateWatchlistButton();
+        } else {
+          console.error('Failed to update watchlist');
+        }
+      } catch (err) {
+        console.error('Error toggling watchlist:', err);
       }
     }
 
